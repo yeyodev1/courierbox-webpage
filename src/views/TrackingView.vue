@@ -107,7 +107,8 @@ watch(() => route.params.codigo, loadFromRoute);
     max-width: 920px;
     min-width: 0;
     width: 100%;
-    padding-inline: clamp(1.25rem, 5vw, 2.5rem);
+    // padding-inline is handled by the .container class via var(--gutter)
+    // Avoid double-padding that causes horizontal overflow on mobile
   }
 
   &__head {

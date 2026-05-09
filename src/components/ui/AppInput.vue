@@ -74,7 +74,10 @@ const fieldId = computed(() => props.id ?? `input-${Math.random().toString(36).s
     position: relative;
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 0.5rem;
+    min-width: 0;
+    width: 100%;
     background: var(--surface-2);
     border: 1px solid var(--border);
     border-radius: $radius-md;
@@ -87,7 +90,7 @@ const fieldId = computed(() => props.id ?? `input-${Math.random().toString(36).s
     }
 
     input {
-      flex: 1;
+      flex: 1 1 0;
       min-width: 0;
       background: transparent;
       border: 0;
@@ -103,11 +106,30 @@ const fieldId = computed(() => props.id ?? `input-${Math.random().toString(36).s
   }
 
   &--large {
-    .field__control input {
-      padding: 1.4rem 1.5rem;
-      font-size: clamp(1.25rem, 2.5vw, 1.875rem);
-      font-family: "Fraunces", serif;
-      letter-spacing: -0.01em;
+    .field__control {
+      // On very small screens, stack input + button vertically
+      @media (max-width: 479px) {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+        padding: 0.5rem;
+      }
+
+      input {
+        padding: 1.1rem 1.25rem;
+        // Mobile-first: starts at 1.1rem and scales up
+        font-size: clamp(1rem, 3.5vw, 1.5rem);
+        font-family: "Fraunces", serif;
+        letter-spacing: -0.01em;
+      }
+
+      // When stacked, make the slot (button) full-width
+      @media (max-width: 479px) {
+        :deep(button), :slotted(button) {
+          width: 100%;
+          border-radius: $radius-md;
+        }
+      }
     }
   }
 

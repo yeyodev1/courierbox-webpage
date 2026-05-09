@@ -12,17 +12,31 @@ export type EstadoCanonico =
 
 export interface TrackingEvento {
   fecha: string | null;
+  fechaTexto: string;
   descripcion: string;
   ubicacion?: string;
+  accion?: string;
+}
+
+export interface TrackingCosto {
+  pesoLb: number;
+  flete: number;
+  arancel: number;
+  total: number;
 }
 
 export interface TrackingResult {
   codigo: string;
+  wr: string | null;
   estado: EstadoCanonico;
   estadoLabel: string;
+  descripcion: string | null;
+  notes: string | null;
+  consignee: string | null;
   pesoLb: number | null;
-  costo: number | null;
-  fechaEntrega: string | null;
+  costo: TrackingCosto | null;
+  fechaRecepcion: string | null;
+  fechaEstado: string | null;
   eventos: TrackingEvento[];
   imagenes: string[];
   actualizadoEn: string;

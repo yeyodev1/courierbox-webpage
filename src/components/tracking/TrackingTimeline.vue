@@ -1,104 +1,215 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import type { TrackingEvento } from "@/services/tracking";
 
-defineProps<{ eventos: TrackingEvento[] }>();
+const props = defineProps<{ eventos: TrackingEvento[] }>();
 
-function fmtDate(iso: string | null): string {
-  if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleDateString("es-EC", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return iso;
+function tsOf(e: TrackingEvento): number {
+  if (e.fecha) {
+    const t = Date.parse(e.fecha);
+    if (!Number.isNaN(t)) return t;
   }
+  return 0;
+}
+
+const sorted = computed(() => {
+  const copy = [...props.eventos];
+  copy.sort((a, b) => tsOf(b) - tsOf(a));
+  return copy;
+});
+
+function fmt(e: TrackingEvento): { date: string; time: string | null } {
+  if (e.fecha) {
+    const d = new Date(e.fecha);
+    if (!Number.isNaN(d.getTime())) {
+      return {
+        date: d.toLocaleDateString("es-EC", { day: "2-digit", month: "short", year: "numeric" }),
+        time: d.toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" }),
+      };
+    }
+  }
+  return { date: e.fechaTexto || "—", time: null };
+}
+
+function cleanDescripcion(e: TrackingEvento): string {
+  const accion = (e.accion ?? "").trim();
+  const desc = (e.descripcion ?? "").trim();
+  // si descripcion ya repite la accion, quita el duplicado
+  if (accion && desc.startsWith(accion)) {
+    const tail = desc.slice(accion.length).replace(/^\s*[—-]\s*/, "").trim();
+    if (!tail || tail === accion) return accion;
+    if (tail === accion) return accion;
+    return `${accion} — ${tail}`;
+  }
+  return desc || accion;
 }
 </script>
 
 <template>
   <ol class="timeline">
     <li
-      v-for="(e, i) in eventos"
+      v-for="(e, i) in sorted"
       :key="i"
-      :class="['timeline__item', { 'timeline__item--latest': i === 0 }]"
+      :class="['t-item', { 't-item--latest': i === 0 }]"
     >
-      <span class="timeline__dot" aria-hidden="true" />
-      <div class="timeline__content">
-        <time class="timeline__date">{{ fmtDate(e.fecha) }}</time>
-        <p class="timeline__desc">{{ e.descripcion }}</p>
-        <p v-if="e.ubicacion" class="timeline__loc">{{ e.ubicacion }}</p>
+      <div class="t-item__date">
+        <span class="t-item__date-day">{{ fmt(e).date }}</span>
+        <span v-if="fmt(e).time" class="t-item__date-time">{{ fmt(e).time }}</span>
+      </div>
+
+      <div class="t-item__rail" aria-hidden="true">
+        <span class="t-item__dot" />
+      </div>
+
+      <div class="t-item__content">
+        <p class="t-item__action">{{ cleanDescripcion(e) }}</p>
+        <p v-if="e.ubicacion" class="t-item__user">
+          <span class="t-item__user-tag">por</span>
+          <span class="t-item__user-name">{{ e.ubicacion }}</span>
+        </p>
       </div>
     </li>
-    <li v-if="!eventos.length" class="timeline__empty">
-      Sin eventos registrados todavía. Vuelve a consultar en unos minutos.
+
+    <li v-if="!sorted.length" class="t-empty">
+      Sin eventos registrados todavía.
     </li>
   </ol>
 </template>
 
 <style scoped lang="scss">
 @use "@/styles/tokens/colors" as *;
+@use "@/styles/mixins/responsive" as *;
 
 .timeline {
-  position: relative;
-  padding-left: 1.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0;
+}
 
-  &::before {
-    content: "";
-    position: absolute;
-    left: 0.5rem;
-    top: 0.5rem;
-    bottom: 0.5rem;
-    width: 1px;
-    background: linear-gradient($brand-orange, transparent);
-    opacity: 0.5;
+.t-item {
+  display: grid;
+  grid-template-columns: 110px 24px 1fr;
+  gap: 1rem;
+  padding-block: 1.1rem;
+  border-bottom: 1px solid var(--border);
+  align-items: start;
+
+  @include md {
+    grid-template-columns: 160px 24px 1fr;
+    gap: 1.5rem;
   }
 
-  &__item {
+  &:last-child { border-bottom: 0; }
+
+  &__date {
+    display: grid;
+    gap: 0.15rem;
+    padding-top: 0.25rem;
+  }
+
+  &__date-day {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.78rem;
+    color: var(--fg);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  &__date-time {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.7rem;
+    color: var(--fg-faint);
+    letter-spacing: 0.06em;
+  }
+
+  &__rail {
     position: relative;
-    padding-block: 1rem;
-    border-bottom: 1px solid var(--border);
-    &:last-child { border-bottom: 0; }
+    width: 24px;
+    align-self: stretch;
+    &::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: -1.1rem;
+      width: 1px;
+      background: linear-gradient(180deg, rgba($brand-orange, 0.5), rgba($ink-100, 0.06));
+      transform: translateX(-50%);
+    }
   }
+
+  &:last-child .t-item__rail::before { background: rgba($ink-100, 0.06); }
 
   &__dot {
     position: absolute;
-    left: -1.5rem;
-    top: 1.4rem;
-    width: 13px; height: 13px;
+    top: 0.65rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     background: var(--surface-2);
-    border: 2px solid $brand-orange;
+    border: 2px solid rgba($brand-orange, 0.5);
+    z-index: 1;
   }
 
-  &__item--latest .timeline__dot {
+  &--latest .t-item__dot {
     background: $brand-orange;
-    box-shadow: 0 0 0 4px rgba($brand-orange, 0.18);
+    border-color: $brand-orange;
+    box-shadow: 0 0 0 4px rgba($brand-orange, 0.18), 0 0 22px rgba($brand-orange, 0.5);
+    animation: dotPulse 2.4s ease-in-out infinite;
   }
 
-  &__date {
-    font-family: "JetBrains Mono", monospace;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
+  &--latest .t-item__action {
+    color: var(--fg);
+    font-weight: 500;
+  }
+
+  &__content {
+    display: grid;
+    gap: 0.4rem;
+    min-width: 0;
+  }
+
+  &__action {
+    color: var(--fg-muted);
+    line-height: 1.5;
+    word-wrap: break-word;
+  }
+
+  &__user {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
     color: var(--fg-faint);
   }
 
-  &__desc {
-    margin-top: 0.25rem;
-    color: var(--fg);
-    line-height: 1.5;
-  }
-  &__loc {
-    margin-top: 0.25rem;
+  &__user-tag { letter-spacing: 0.1em; text-transform: uppercase; font-size: 0.7rem; }
+  &__user-name {
+    font-family: "JetBrains Mono", monospace;
     color: var(--fg-muted);
-    font-size: 0.85rem;
+    text-transform: lowercase;
+    border: 1px solid var(--border);
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
   }
-  &__empty {
-    color: var(--fg-muted);
-    padding: 2rem 0;
-    text-align: center;
-  }
+}
+
+.t-empty {
+  color: var(--fg-muted);
+  padding: 2.5rem 0;
+  text-align: center;
+}
+
+@keyframes dotPulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(#F08A1F, 0.18), 0 0 22px rgba(#F08A1F, 0.5); }
+  50%      { box-shadow: 0 0 0 7px rgba(#F08A1F, 0.10), 0 0 30px rgba(#F08A1F, 0.65); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-item--latest .t-item__dot { animation: none; }
 }
 </style>

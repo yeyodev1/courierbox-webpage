@@ -12,16 +12,35 @@ import { whatsappUrl } from "@/config/contact";
 const props = defineProps<{ data: TrackingResult }>();
 
 const safeDescripcion = computed(() => sanitizeText(props.data.descripcion, null));
-const safeNotes = computed(() => sanitizeText(props.data.notes, null));
-const safeConsignee = computed(() => {
-  const raw = sanitizeText(props.data.consignee, null);
-  if (!raw) return props.data.codigo;
-  return /consignatario/i.test(raw) ? props.data.codigo : raw;
+const safeShipper = computed(() => sanitizeText(props.data.shipper, null));
+const safeCarrier = computed(() => sanitizeText(props.data.carrier, null));
+
+const trackingOriginal = computed<string | null>(() => {
+  const direct = sanitizeText(props.data.trackingOriginal, null);
+  if (direct) return direct;
+  const fromNotes = sanitizeText(props.data.notes, null);
+  if (fromNotes && /^[A-Z0-9-]{8,}$/i.test(fromNotes)) return fromNotes;
+  return null;
 });
 
 const waLink = computed(() =>
   whatsappUrl(`Hola, consulta sobre tracking ${props.data.codigo}`),
 );
+
+function fmtDateShort(iso: string | null): string {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString("es-EC", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return iso;
+  }
+}
 
 const tone = computed(() => {
   switch (props.data.estado) {
@@ -37,17 +56,6 @@ const tone = computed(() => {
 });
 
 const isDelivered = computed(() => props.data.estado === "entregado");
-
-function fmtDateLong(iso: string | null): string {
-  if (!iso) return "—";
-  try {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return iso;
-    return d.toLocaleDateString("es-EC", {
-      weekday: "long", day: "numeric", month: "long", year: "numeric",
-    });
-  } catch { return iso; }
-}
 
 function fmtDateTime(iso: string | null): string {
   if (!iso) return "—";
@@ -103,6 +111,9 @@ function copyCodigo() {
         <div class="hero__stat hero__stat--accent">
           <span class="hero__stat-label">Total estimado</span>
           <span class="hero__stat-value">{{ data.costo ? `$${data.costo.total.toFixed(2)}` : "—" }}</span>
+          <span v-if="data.costo" class="hero__stat-legal">
+            Precio sujeto a la tarifa proporcional proporcionada por tu asesor.
+          </span>
         </div>
       </div>
     </header>
@@ -112,19 +123,27 @@ function copyCodigo() {
       <TrackingPipeline :estado="data.estado" />
     </section>
 
-    <!-- INFO GRID ────────────────────────────────────────── -->
+    <!-- INFO LOGÍSTICA (sin datos personales) ────────────── -->
     <section class="card__section info-grid">
       <div class="info-cell">
-        <span class="info-cell__label">Para</span>
-        <strong>{{ safeNotes ?? data.wr ?? "—" }}</strong>
-      </div>
-      <div class="info-cell info-cell--wide">
         <span class="info-cell__label">Tracking</span>
-        <strong>{{ safeConsignee ?? "—" }}</strong>
+        <strong class="info-cell__mono">{{ trackingOriginal ?? data.wr ?? data.codigo }}</strong>
       </div>
       <div class="info-cell">
+        <span class="info-cell__label">Shipper</span>
+        <strong>{{ safeShipper ?? "Por confirmar" }}</strong>
+      </div>
+      <div class="info-cell">
+        <span class="info-cell__label">Carrier</span>
+        <strong>{{ safeCarrier ?? "Por confirmar" }}</strong>
+      </div>
+      <div class="info-cell info-cell--wide">
         <span class="info-cell__label">Descripción</span>
         <strong>{{ safeDescripcion ?? "—" }}</strong>
+      </div>
+      <div class="info-cell">
+        <span class="info-cell__label">Recibido en bodega</span>
+        <strong>{{ fmtDateShort(data.fechaRecepcion) }}</strong>
       </div>
     </section>
 
@@ -151,6 +170,10 @@ function copyCodigo() {
           <span>Total</span>
           <strong>${{ data.costo.total.toFixed(2) }}</strong>
         </div>
+        <p class="cost__legal">
+          Precio sujeto a la tarifa proporcional proporcionada por tu asesor.
+          <span>Cálculo referencial: la tarifa definitiva la confirma tu asesor.</span>
+        </p>
       </div>
     </section>
 
@@ -173,10 +196,6 @@ function copyCodigo() {
 
     <!-- FOOTER META ──────────────────────────────────────── -->
     <footer class="card__foot">
-      <div>
-        <span class="card__foot-label">Recibido en bodega</span>
-        <strong>{{ fmtDateLong(data.fechaRecepcion) }}</strong>
-      </div>
       <div>
         <span class="card__foot-label">Última consulta</span>
         <strong>{{ fmtDateTime(data.actualizadoEn) }}</strong>
@@ -240,7 +259,7 @@ function copyCodigo() {
     background: var(--surface);
 
     @include md {
-      grid-template-columns: 1fr 1fr auto;
+      grid-template-columns: 1fr auto;
       align-items: center;
     }
 
@@ -413,6 +432,17 @@ function copyCodigo() {
       .hero__stat-value { color: $brand-orange; }
     }
   }
+
+  &__stat-legal {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed rgba($brand-orange, 0.35);
+    color: var(--fg-muted);
+    font-size: 0.7rem;
+    font-style: italic;
+    line-height: 1.4;
+    display: block;
+  }
 }
 
 /* INFO GRID ──────────────────────────────────────── */
@@ -424,7 +454,8 @@ function copyCodigo() {
   background: var(--border);
   border-radius: 0;
 
-  @include md { grid-template-columns: 1fr 2fr 1fr; }
+  @include sm { grid-template-columns: 1fr 1fr; }
+  @include md { grid-template-columns: repeat(3, 1fr); }
 }
 
 .info-cell {
@@ -448,6 +479,17 @@ function copyCodigo() {
     line-height: 1.4;
     word-break: break-word;
   }
+
+  &__mono {
+    font-family: "JetBrains Mono", monospace !important;
+    font-size: 0.9rem !important;
+    letter-spacing: 0.02em;
+    color: $brand-orange !important;
+  }
+}
+
+.info-cell--wide {
+  @include md { grid-column: span 2; }
 }
 
 /* COST ───────────────────────────────────────────── */
@@ -535,6 +577,23 @@ function copyCodigo() {
         color: $brand-orange;
         letter-spacing: -0.02em;
       }
+    }
+  }
+
+  &__legal {
+    margin: 0.75rem 0 0;
+    padding-top: 0.65rem;
+    border-top: 1px dashed rgba($brand-orange, 0.25);
+    color: var(--fg);
+    font-size: 0.78rem;
+    font-style: italic;
+    line-height: 1.5;
+    display: grid;
+    gap: 0.25rem;
+    span {
+      color: var(--fg-faint);
+      font-style: normal;
+      font-size: 0.7rem;
     }
   }
 }

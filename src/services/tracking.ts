@@ -33,6 +33,9 @@ export interface TrackingResult {
   descripcion: string | null;
   notes: string | null;
   consignee: string | null;
+  trackingOriginal?: string | null;
+  shipper?: string | null;
+  carrier?: string | null;
   pesoLb: number | null;
   costo: TrackingCosto | null;
   fechaRecepcion: string | null;

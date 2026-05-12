@@ -62,10 +62,6 @@ function cleanDescripcion(e: TrackingEvento): string {
 
       <div class="t-item__content">
         <p class="t-item__action">{{ cleanDescripcion(e) }}</p>
-        <p v-if="e.ubicacion" class="t-item__user">
-          <span class="t-item__user-tag">por</span>
-          <span class="t-item__user-name">{{ e.ubicacion }}</span>
-        </p>
       </div>
     </li>
 

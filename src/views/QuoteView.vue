@@ -153,6 +153,10 @@ const waLink = computed(() => {
             <h2>{{ currentRate.title }}</h2>
             <p>{{ currentRate.timeframe }}</p>
           </div>
+          <span class="card__ref" aria-label="Cálculo referencial">
+            <span class="card__ref-dot" aria-hidden="true" />
+            Cálculo referencial
+          </span>
         </header>
 
         <div class="card__body">
@@ -212,6 +216,10 @@ const waLink = computed(() => {
               <span>{{ currentRate.arancelPerLb === 0 && !currentRate.importApplyIva ? "Total final" : "Total estimado" }}</span>
               <strong>{{ fmt(calc.total) }}</strong>
             </div>
+            <p class="breakdown__legal">
+              Precio sujeto a la tarifa proporcional proporcionada por tu asesor.
+              <span>Cálculo referencial: la tarifa definitiva depende de la interacción directa con tu asesor.</span>
+            </p>
           </div>
 
           <div class="card__actions">
@@ -350,8 +358,12 @@ const waLink = computed(() => {
   &__head {
     padding: clamp(1.5rem, 3vw, 2rem);
     border-bottom: 1px solid var(--border);
-    display: grid;
-    gap: 0.35rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+    > div { display: grid; gap: 0.35rem; min-width: 0; }
     h2 {
       font-family: "Fraunces", serif;
       font-weight: 500;
@@ -360,6 +372,31 @@ const waLink = computed(() => {
       color: var(--fg);
     }
     p { color: var(--fg-muted); font-size: 0.9rem; }
+  }
+
+  &__ref {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 999px;
+    background: rgba($brand-orange, 0.1);
+    border: 1px solid rgba($brand-orange, 0.4);
+    color: $brand-orange;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  &__ref-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: $brand-orange;
+    box-shadow: 0 0 0 4px rgba($brand-orange, 0.18);
+    animation: refPulse 2.4s ease-in-out infinite;
   }
 
   &__eyebrow {
@@ -415,6 +452,11 @@ const waLink = computed(() => {
   }
 }
 
+@keyframes refPulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(240, 138, 31, 0.18); }
+  50%      { box-shadow: 0 0 0 7px rgba(240, 138, 31, 0.08); }
+}
+
 .input-row {
   display: grid;
   grid-template-columns: 1fr;
@@ -455,6 +497,25 @@ const waLink = computed(() => {
   border-radius: 16px;
   background: var(--surface);
   min-width: 0;
+
+  &__legal {
+    margin: 0.5rem 0 0;
+    padding-top: 0.65rem;
+    border-top: 1px dashed var(--border);
+    color: var(--fg);
+    font-size: 0.78rem;
+    font-style: italic;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+    display: grid;
+    gap: 0.25rem;
+    span {
+      color: var(--fg-faint);
+      font-style: normal;
+      font-size: 0.7rem;
+      letter-spacing: 0.02em;
+    }
+  }
 
   &__row {
     display: flex;

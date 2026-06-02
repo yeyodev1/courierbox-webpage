@@ -4,9 +4,25 @@ import FooterEditorial from "@/components/sections/FooterEditorial.vue";
 import WhatsAppFab from "@/components/ui/WhatsAppFab.vue";
 import { useLenis } from "@/composables/useLenis";
 import { useToastStore } from "@/stores/toast.store";
+import { onMounted, onUnmounted } from "vue";
+import { useAuthStore } from "@/stores/auth.store";
 
 useLenis();
 const toastStore = useToastStore();
+
+onMounted(() => {
+  const authStore = useAuthStore();
+  const handleTokenExpired = () => {
+    toastStore.showNotification("Sesión expirada. Por favor, inicia sesión nuevamente.", "error");
+    authStore.logout();
+  };
+  
+  window.addEventListener("auth:token-expired", handleTokenExpired);
+  
+  onUnmounted(() => {
+    window.removeEventListener("auth:token-expired", handleTokenExpired);
+  });
+});
 </script>
 
 <template>

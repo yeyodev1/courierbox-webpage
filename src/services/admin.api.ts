@@ -1,41 +1,28 @@
-import { useAuthStore } from "../stores/auth.store";
+import APIBase from "./httpBase";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8100/api";
+class AdminAPI extends APIBase {
+  protected getHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
 
-const handleResponse = async (res: Response) => {
-  if (res.status === 401) {
-    const authStore = useAuthStore();
-    authStore.logout();
-    throw new Error("Sesión expirada. Por favor, inicia sesión nuevamente.");
+    const token = localStorage.getItem("admin_token");
+    if (token && token !== "null") {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    return headers;
   }
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || "Operation failed");
-  }
-  return res.json();
-};
 
-export const adminApi = {
   async login(email: string, password: string) {
-    const res = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-
-    return handleResponse(res);
-  },
+    const res = await this.post<any>("auth/login", { email, password });
+    return res.data;
+  }
 
   async getPayments() {
-    const authStore = useAuthStore();
-    const res = await fetch(`${API_BASE_URL}/payments`, {
-      headers: {
-        Authorization: `Bearer ${authStore.token}`,
-      },
-    });
-
-    return handleResponse(res);
-  },
+    const res = await this.get<any>("payments");
+    return res.data;
+  }
 
   async generateLink(payload: {
     amount: number;
@@ -46,79 +33,34 @@ export const adminApi = {
     customerEmail?: string;
     customerName?: string;
   }) {
-    const authStore = useAuthStore();
-    const res = await fetch(`${API_BASE_URL}/payments/generate`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${authStore.token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    return handleResponse(res);
-  },
+    const res = await this.post<any>("payments/generate", payload);
+    return res.data;
+  }
 
   async deletePayment(id: string) {
-    const authStore = useAuthStore();
-    const res = await fetch(`${API_BASE_URL}/payments/${id}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${authStore.token}`,
-      },
-    });
-
-    return handleResponse(res);
-  },
+    const res = await this.delete<any>(`payments/${id}`);
+    return res.data;
+  }
 
   async getUsers() {
-    const authStore = useAuthStore();
-    const res = await fetch(`${API_BASE_URL}/users`, {
-      headers: {
-        Authorization: `Bearer ${authStore.token}`,
-      },
-    });
-
-    return handleResponse(res);
-  },
+    const res = await this.get<any>("users");
+    return res.data;
+  }
 
   async createUser(payload: { email: string; password?: string; name: string; role?: string }) {
-    const authStore = useAuthStore();
-    const res = await fetch(`${API_BASE_URL}/users`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${authStore.token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    return handleResponse(res);
-  },
+    const res = await this.post<any>("users", payload);
+    return res.data;
+  }
 
   async updateUser(id: string, payload: { email?: string; password?: string; name?: string; role?: string }) {
-    const authStore = useAuthStore();
-    const res = await fetch(`${API_BASE_URL}/users/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${authStore.token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    return handleResponse(res);
-  },
+    const res = await this.put<any>(`users/${id}`, payload);
+    return res.data;
+  }
 
   async deleteUser(id: string) {
-    const authStore = useAuthStore();
-    const res = await fetch(`${API_BASE_URL}/users/${id}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${authStore.token}`,
-      },
-    });
+    const res = await this.delete<any>(`users/${id}`);
+    return res.data;
+  }
+}
 
-    return handleResponse(res);
-  },
-};
+export const adminApi = new AdminAPI();

@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/auth.store';
+import { useToastStore } from '@/stores/toast.store';
 import { adminApi } from '@/services/admin.api';
 
 const authStore = useAuthStore();
+const toastStore = useToastStore();
 const activeTab = ref<'payments' | 'users'>('payments');
 
 // Payments State
@@ -37,8 +39,15 @@ const userForm = ref({
   role: 'admin',
 });
 
-const isEditingUser = ref(false);
+const showEditUserModal = ref(false);
 const editingUserId = ref<string | null>(null);
+const editUserForm = ref({
+  name: '',
+  email: '',
+  password: '',
+  role: 'admin',
+});
+const updatingUser = ref(false);
 
 const showDeleteModal = ref(false);
 const userToDelete = ref<any>(null);
@@ -85,12 +94,39 @@ const handleGenerateLink = async () => {
     };
     displayAmount.value = null;
     await fetchPayments();
+    toastStore.showNotification('Link de pago generado exitosamente', 'success');
   } catch (err: any) {
     errorPayment.value = err.message || 'Error al generar el link';
   } finally {
     creatingPayment.value = false;
   }
 };
+
+const showDeletePaymentModal = ref(false);
+const paymentToDelete = ref<any>(null);
+
+const confirmDeletePayment = (payment: any) => {
+  if (payment.status === 'paid' || payment.status === 'approved') {
+    toastStore.showNotification('No se puede eliminar un link de pago que ya está pagado.', 'warning');
+    return;
+  }
+  paymentToDelete.value = payment;
+  showDeletePaymentModal.value = true;
+};
+
+const executeDeletePayment = async () => {
+  if (!paymentToDelete.value) return;
+  try {
+    await adminApi.deletePayment(paymentToDelete.value._id);
+    showDeletePaymentModal.value = false;
+    paymentToDelete.value = null;
+    await fetchPayments();
+    toastStore.showNotification('Link de pago eliminado exitosamente', 'success');
+  } catch (err: any) {
+    toastStore.showNotification(err.message || 'Error al eliminar el link de pago', 'error');
+  }
+};
+
 
 // API Calls - Users
 const fetchUsers = async () => {
@@ -109,38 +145,49 @@ const handleSaveUser = async () => {
   creatingUser.value = true;
   errorUser.value = '';
   try {
-    if (isEditingUser.value && editingUserId.value) {
-      const payload: any = { ...userForm.value };
-      if (!payload.password) delete payload.password; // Solo enviar si cambió
-      await adminApi.updateUser(editingUserId.value, payload);
-    } else {
-      await adminApi.createUser({ ...userForm.value });
-    }
-    cancelEditUser();
+    await adminApi.createUser({ ...userForm.value });
+    toastStore.showNotification('Usuario creado exitosamente', 'success');
+    userForm.value = { name: '', email: '', password: '', role: 'admin' };
     await fetchUsers();
   } catch (err: any) {
-    errorUser.value = err.message || (isEditingUser.value ? 'Error al actualizar' : 'Error al crear el usuario');
+    errorUser.value = err.message || 'Error al crear el usuario';
   } finally {
     creatingUser.value = false;
   }
 };
 
+const handleUpdateUser = async () => {
+  if (!editingUserId.value) return;
+  updatingUser.value = true;
+  try {
+    const payload: any = { ...editUserForm.value };
+    if (!payload.password) delete payload.password;
+    await adminApi.updateUser(editingUserId.value, payload);
+    toastStore.showNotification('Usuario actualizado exitosamente', 'success');
+    cancelEditUser();
+    await fetchUsers();
+  } catch (err: any) {
+    toastStore.showNotification(err.message || 'Error al actualizar', 'error');
+  } finally {
+    updatingUser.value = false;
+  }
+};
+
 const startEditUser = (user: any) => {
-  isEditingUser.value = true;
   editingUserId.value = user._id;
-  userForm.value = {
+  editUserForm.value = {
     name: user.name,
     email: user.email,
     password: '',
     role: user.role,
   };
+  showEditUserModal.value = true;
 };
 
 const cancelEditUser = () => {
-  isEditingUser.value = false;
+  showEditUserModal.value = false;
   editingUserId.value = null;
-  errorUser.value = '';
-  userForm.value = { name: '', email: '', password: '', role: 'admin' };
+  editUserForm.value = { name: '', email: '', password: '', role: 'admin' };
 };
 
 const confirmDeleteUser = (user: any) => {
@@ -155,15 +202,16 @@ const executeDeleteUser = async () => {
     showDeleteModal.value = false;
     userToDelete.value = null;
     await fetchUsers();
+    toastStore.showNotification('Usuario eliminado exitosamente', 'success');
   } catch (err: any) {
-    alert(err.message || 'Error al eliminar el usuario');
+    toastStore.showNotification(err.message || 'Error al eliminar el usuario', 'error');
   }
 };
 
 const copyToClipboard = async (text: string) => {
   try {
     await navigator.clipboard.writeText(text);
-    alert('Link copiado al portapapeles');
+    toastStore.showNotification('Link copiado al portapapeles', 'success');
   } catch (err) {
     console.error('Failed to copy', err);
   }
@@ -335,6 +383,9 @@ onMounted(() => {
                             <button @click="copyToClipboard(payment.paymentLink)" class="action-btn copy" title="Copiar Link">
                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                             </button>
+                            <button v-if="payment.status !== 'paid' && payment.status !== 'approved'" @click="confirmDeletePayment(payment)" class="action-btn delete-btn" title="Eliminar Link">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
                           </td>
                         </tr>
                       </tbody>
@@ -355,7 +406,7 @@ onMounted(() => {
                         <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line>
                       </svg>
                     </div>
-                    <h2>{{ isEditingUser ? 'Editar Miembro' : 'Registrar Miembro' }}</h2>
+                    <h2>Registrar Miembro</h2>
                   </div>
                   
                   <form @submit.prevent="handleSaveUser" class="premium-form">
@@ -371,8 +422,8 @@ onMounted(() => {
                       </div>
                       
                       <div class="form-group">
-                        <label>Contraseña {{ isEditingUser ? '(Opcional para mantener)' : '*' }}</label>
-                        <input type="password" v-model="userForm.password" :required="!isEditingUser" placeholder="********" />
+                        <label>Contraseña *</label>
+                        <input type="password" v-model="userForm.password" required placeholder="********" />
                       </div>
                     </div>
 
@@ -395,9 +446,8 @@ onMounted(() => {
                     </div>
 
                     <div class="form-actions-row">
-                      <button v-if="isEditingUser" type="button" @click="cancelEditUser" class="cancel-btn">Cancelar</button>
                       <button type="submit" :disabled="creatingUser" class="submit-btn flex-1">
-                        <span v-if="!creatingUser">{{ isEditingUser ? 'Guardar Cambios' : 'Crear Usuario' }}</span>
+                        <span v-if="!creatingUser">Crear Usuario</span>
                         <span v-else class="loader"></span>
                       </button>
                     </div>
@@ -479,6 +529,83 @@ onMounted(() => {
             <button @click="showDeleteModal = false" class="cancel-btn">Cancelar</button>
             <button @click="executeDeleteUser" class="delete-confirm-btn">Sí, eliminar</button>
           </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- Modal de Confirmación para Pago -->
+    <transition name="fade">
+      <div v-if="showDeletePaymentModal" class="modal-overlay">
+        <div class="modal-content glass-card">
+          <div class="modal-icon warning">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          </div>
+          <h3>Confirmar Eliminación</h3>
+          <p>¿Estás seguro de que deseas eliminar el link de pago <strong>{{ paymentToDelete?.reference }}</strong>? Esta acción no se puede deshacer.</p>
+          <div class="modal-actions">
+            <button @click="showDeletePaymentModal = false" class="cancel-btn">Cancelar</button>
+            <button @click="executeDeletePayment" class="delete-confirm-btn">Sí, eliminar</button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- Modal para Editar Usuario -->
+    <transition name="fade">
+      <div v-if="showEditUserModal" class="modal-overlay">
+        <div class="modal-content glass-card form-modal">
+          <div class="modal-header">
+            <h3>Editar Miembro</h3>
+            <button @click="cancelEditUser" class="close-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
+          <form @submit.prevent="handleUpdateUser" class="premium-form text-left">
+            <div class="form-group full-width">
+              <label>Nombre Completo *</label>
+              <div class="input-with-icon">
+                <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                <input type="text" v-model="editUserForm.name" required placeholder="Ej. Ana Lucía" />
+              </div>
+            </div>
+            
+            <div class="form-group full-width">
+              <label>Correo Electrónico *</label>
+              <div class="input-with-icon">
+                <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                <input type="email" v-model="editUserForm.email" required placeholder="ejemplo@courierbox.com" />
+              </div>
+            </div>
+            
+            <div class="form-group full-width">
+              <label>Contraseña (Opcional para mantener)</label>
+              <div class="input-with-icon">
+                <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <input type="password" v-model="editUserForm.password" placeholder="********" />
+              </div>
+            </div>
+
+            <div class="form-group full-width">
+              <label>Rol en el Sistema</label>
+              <div class="select-wrapper">
+                <select v-model="editUserForm.role" class="custom-select">
+                  <option value="admin">Administrador Total</option>
+                  <option value="user">Usuario Regular</option>
+                </select>
+                <div class="select-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions-row">
+              <button type="button" @click="cancelEditUser" class="cancel-btn">Cancelar</button>
+              <button type="submit" :disabled="updatingUser" class="submit-btn flex-1">
+                <span v-if="!updatingUser">Guardar Cambios</span>
+                <span v-else class="loader"></span>
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </transition>
@@ -774,16 +901,24 @@ onMounted(() => {
     .input-with-icon {
       position: relative;
       
-      span {
+      span, .input-icon {
         position: absolute;
         left: 1rem;
         top: 50%;
         transform: translateY(-50%);
         color: $ink-400;
         font-weight: 600;
+        transition: color 0.3s ease;
       }
 
-      input { padding-left: 2rem; }
+      input { 
+        padding-left: 2.75rem; 
+        
+        &:focus + .input-icon, 
+        &:focus ~ .input-icon {
+          color: $brand-orange;
+        }
+      }
     }
 
     small {
@@ -1082,6 +1217,33 @@ onMounted(() => {
   width: 100%;
   text-align: center;
   padding: 2.5rem 2rem;
+
+  &.form-modal {
+    max-width: 500px;
+    padding: 2rem;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+
+    h3 { margin: 0; }
+  }
+
+  .close-btn {
+    background: transparent;
+    border: none;
+    color: $ink-400;
+    cursor: pointer;
+    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover { color: $fg-dark; }
+  }
 
   h3 {
     margin: 1rem 0 0.5rem;

@@ -59,6 +59,18 @@ export const adminApi = {
     return handleResponse(res);
   },
 
+  async deletePayment(id: string) {
+    const authStore = useAuthStore();
+    const res = await fetch(`${API_BASE_URL}/payments/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${authStore.token}`,
+      },
+    });
+
+    return handleResponse(res);
+  },
+
   async getUsers() {
     const authStore = useAuthStore();
     const res = await fetch(`${API_BASE_URL}/users`, {

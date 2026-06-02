@@ -9,14 +9,14 @@ useLenis();
 
 <template>
   <div class="app">
-    <SiteNav />
+    <SiteNav v-if="!$route.meta.hideNavigation" />
     <RouterView v-slot="{ Component, route }">
       <Transition name="page" mode="out-in">
         <component :is="Component" :key="route.fullPath" />
       </Transition>
     </RouterView>
-    <FooterEditorial />
-    <WhatsAppFab />
+    <FooterEditorial v-if="!$route.meta.hideNavigation" />
+    <WhatsAppFab v-if="!$route.meta.hideNavigation" />
   </div>
 </template>
 

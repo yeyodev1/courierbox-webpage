@@ -44,10 +44,24 @@ const routes: RouteRecordRaw[] = [
     meta: { title: "Contacto · Courier Box" },
   },
   {
+    path: "/login",
+    name: "AdminLogin",
+    component: () => import("@/views/admin/LoginView.vue"),
+    meta: { title: "Admin Login · Courier Box", hideNavigation: true },
+  },
+  {
+    path: "/admin",
+    name: "AdminDashboard",
+    component: () => import("@/views/admin/DashboardView.vue"),
+    meta: { title: "Admin Dashboard · Courier Box", requiresAuth: true, hideNavigation: true },
+  },
+  {
     path: "/:pathMatch(.*)*",
     redirect: "/",
   },
 ];
+
+import { useAuthStore } from "@/stores/auth.store";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -56,6 +70,17 @@ const router = createRouter({
     if (saved) return saved;
     return { left: 0, top: 0, behavior: "instant" as ScrollBehavior };
   },
+});
+
+router.beforeEach((to, _from, next) => {
+  const authStore = useAuthStore();
+  if (to.meta.requiresAuth && !authStore.isAuthenticated()) {
+    next({ name: "AdminLogin" });
+  } else if (to.name === "AdminLogin" && authStore.isAuthenticated()) {
+    next({ name: "AdminDashboard" });
+  } else {
+    next();
+  }
 });
 
 router.afterEach((to) => {

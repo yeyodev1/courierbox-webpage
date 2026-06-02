@@ -310,6 +310,7 @@ onMounted(() => {
                       <thead>
                         <tr>
                           <th>Referencia</th>
+                          <th>Cliente / Creado Por</th>
                           <th>Total</th>
                           <th>Estado</th>
                           <th class="text-right">Acciones</th>
@@ -321,8 +322,12 @@ onMounted(() => {
                             <div class="cell-title">{{ payment.reference }}</div>
                             <div class="cell-subtitle">{{ new Date(payment.createdAt).toLocaleDateString() }}</div>
                           </td>
+                          <td>
+                            <div class="cell-title">{{ payment.customerName || 'N/A' }}</div>
+                            <div class="cell-subtitle">Por: {{ payment.createdBy?.name || 'Sistema' }}</div>
+                          </td>
                           <td class="amount">${{ (payment.amount / 100).toFixed(2) }}</td>
-                          <td><span :class="['status-badge', payment.status]">{{ payment.status }}</span></td>
+                          <td><span :class="['status-badge', payment.status === 'paid' || payment.status === 'approved' ? 'paid' : payment.status]">{{ payment.status === 'paid' || payment.status === 'approved' ? 'Pagado' : payment.status === 'pending' ? 'Pendiente' : payment.status === 'canceled' ? 'Cancelado' : payment.status }}</span></td>
                           <td class="actions">
                             <a :href="payment.paymentLink" target="_blank" class="action-btn" title="Abrir Link">
                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>

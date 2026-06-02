@@ -48,6 +48,7 @@ const editUserForm = ref({
   role: 'admin',
 });
 const updatingUser = ref(false);
+const updateSuccess = ref(false);
 
 const showDeleteModal = ref(false);
 const userToDelete = ref<any>(null);
@@ -163,9 +164,15 @@ const handleUpdateUser = async () => {
     const payload: any = { ...editUserForm.value };
     if (!payload.password) delete payload.password;
     await adminApi.updateUser(editingUserId.value, payload);
-    toastStore.showNotification('Usuario actualizado exitosamente', 'success');
-    cancelEditUser();
+    
+    toastStore.showNotification(`Datos de ${editUserForm.value.name} guardados correctamente.`, 'success');
+    updateSuccess.value = true;
     await fetchUsers();
+    
+    setTimeout(() => {
+      updateSuccess.value = false;
+      cancelEditUser();
+    }, 1500);
   } catch (err: any) {
     toastStore.showNotification(err.message || 'Error al actualizar', 'error');
   } finally {
@@ -411,18 +418,18 @@ onMounted(() => {
                   
                   <form @submit.prevent="handleSaveUser" class="premium-form">
                     <div class="form-group full-width">
-                      <label>Nombre Completo *</label>
+                      <label>Nombre Completo <span class="required-tag">*</span></label>
                       <input type="text" v-model="userForm.name" required placeholder="Ej. Ana Lucía" />
                     </div>
                     
                     <div class="form-row">
                       <div class="form-group">
-                        <label>Correo Electrónico *</label>
+                        <label>Correo Electrónico <span class="required-tag">*</span></label>
                         <input type="email" v-model="userForm.email" required placeholder="ejemplo@courierbox.com" />
                       </div>
                       
                       <div class="form-group">
-                        <label>Contraseña *</label>
+                        <label>Contraseña <span class="required-tag">*</span></label>
                         <input type="password" v-model="userForm.password" required placeholder="********" />
                       </div>
                     </div>
@@ -554,15 +561,18 @@ onMounted(() => {
     <transition name="fade">
       <div v-if="showEditUserModal" class="modal-overlay">
         <div class="modal-content glass-card form-modal">
-          <div class="modal-header">
-            <h3>Editar Miembro</h3>
+          <div class="modal-header with-subtitle">
+            <div class="header-titles">
+              <h3>Actualizar Perfil</h3>
+              <p class="modal-subtitle">Modifica la información y accesos del miembro.</p>
+            </div>
             <button @click="cancelEditUser" class="close-btn">
               <i class="fa-solid fa-xmark"></i>
             </button>
           </div>
           <form @submit.prevent="handleUpdateUser" class="premium-form text-left">
             <div class="form-group full-width">
-              <label>Nombre Completo *</label>
+              <label>Nombres Completos <span class="required-tag">*</span></label>
               <div class="input-with-icon">
                 <i class="fa-solid fa-user input-icon"></i>
                 <input type="text" v-model="editUserForm.name" required placeholder="Ej. Ana Lucía" />
@@ -570,7 +580,7 @@ onMounted(() => {
             </div>
             
             <div class="form-group full-width">
-              <label>Correo Electrónico *</label>
+              <label>Correo de Acceso <span class="required-tag">*</span></label>
               <div class="input-with-icon">
                 <i class="fa-solid fa-envelope input-icon"></i>
                 <input type="email" v-model="editUserForm.email" required placeholder="ejemplo@courierbox.com" />
@@ -578,15 +588,15 @@ onMounted(() => {
             </div>
             
             <div class="form-group full-width">
-              <label>Contraseña (Opcional para mantener)</label>
+              <label>Nueva Contraseña <span class="optional-tag">Opcional</span></label>
               <div class="input-with-icon">
                 <i class="fa-solid fa-lock input-icon"></i>
-                <input type="password" v-model="editUserForm.password" placeholder="********" />
+                <input type="password" v-model="editUserForm.password" placeholder="Solo si deseas cambiarla..." />
               </div>
             </div>
 
             <div class="form-group full-width">
-              <label>Rol en el Sistema</label>
+              <label>Privilegios del Sistema</label>
               <div class="select-wrapper">
                 <select v-model="editUserForm.role" class="custom-select">
                   <option value="admin">Administrador Total</option>
@@ -600,8 +610,9 @@ onMounted(() => {
 
             <div class="form-actions-row">
               <button type="button" @click="cancelEditUser" class="cancel-btn">Cancelar</button>
-              <button type="submit" :disabled="updatingUser" class="submit-btn flex-1">
-                <span v-if="!updatingUser">Guardar Cambios</span>
+              <button type="submit" :disabled="updatingUser || updateSuccess" :class="['submit-btn flex-1', { 'success-state': updateSuccess }]">
+                <span v-if="updateSuccess"><i class="fa-solid fa-check"></i> ¡Guardado!</span>
+                <span v-else-if="!updatingUser">Guardar Cambios</span>
                 <span v-else class="loader"></span>
               </button>
             </div>
@@ -868,6 +879,24 @@ onMounted(() => {
       font-weight: 500;
       color: $ink-200;
       margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      .optional-tag {
+        font-size: 0.7rem;
+        background: rgba($ink-500, 0.2);
+        padding: 0.1rem 0.4rem;
+        border-radius: 4px;
+        color: $ink-400;
+        font-weight: 600;
+      }
+      
+      .required-tag {
+        color: $signal-red;
+        font-weight: bold;
+        margin-left: 0.25rem;
+      }
     }
 
     input, .custom-select {
@@ -957,29 +986,32 @@ onMounted(() => {
 
 /* Buttons */
 .submit-btn {
-  background: linear-gradient(135deg, $brand-orange, $brand-orange-deep);
-  color: $ink-1000;
+  background: $brand-orange;
+  color: #fff;
   border: none;
-  padding: 1rem;
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 1rem;
+  border-radius: 10px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 52px;
-  margin-top: 0.5rem;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 44px;
 
   &:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba($brand-orange, 0.3);
+    background: lighten($brand-orange, 5%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba($brand-orange, 0.3);
   }
 
-  &:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
+  &:disabled { opacity: 0.7; cursor: not-allowed; }
+
+  &.success-state {
+    background: #2BBB92; /* Verde éxito */
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(#2BBB92, 0.3);
+    
+    i { margin-right: 0.5rem; font-size: 1.1rem; }
   }
 
   .loader {
@@ -1230,7 +1262,21 @@ onMounted(() => {
     align-items: center;
     margin-bottom: 1.5rem;
 
+    &.with-subtitle {
+      align-items: flex-start;
+      .header-titles {
+        text-align: left;
+      }
+    }
+
     h3 { margin: 0; }
+    
+    .modal-subtitle {
+      font-size: 0.85rem;
+      color: $ink-400;
+      margin: 0.25rem 0 0 0;
+      font-weight: 400;
+    }
   }
 
   .close-btn {

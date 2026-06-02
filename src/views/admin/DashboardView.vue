@@ -22,6 +22,8 @@ const paymentForm = ref({
   customerEmail: '',
 });
 
+const displayAmount = ref<number | null>(null);
+
 // Users State
 const users = ref<any[]>([]);
 const loadingUsers = ref(false);
@@ -43,10 +45,14 @@ const userToDelete = ref<any>(null);
 
 // Calculate total payment
 const calculateTotals = () => {
-  paymentForm.value.amount = 
-    paymentForm.value.amountWithTax + 
-    paymentForm.value.amountWithoutTax + 
-    paymentForm.value.tax;
+  const total = displayAmount.value || 0;
+  const cents = Math.round(total * 100);
+  
+  // Payphone expects these in cents
+  paymentForm.value.amount = cents;
+  paymentForm.value.amountWithoutTax = cents;
+  paymentForm.value.amountWithTax = 0;
+  paymentForm.value.tax = 0;
 };
 
 // API Calls - Payments
@@ -77,6 +83,7 @@ const handleGenerateLink = async () => {
       customerName: '',
       customerEmail: '',
     };
+    displayAmount.value = null;
     await fetchPayments();
   } catch (err: any) {
     errorPayment.value = err.message || 'Error al generar el link';
@@ -236,44 +243,16 @@ onMounted(() => {
                   </div>
                   
                   <form @submit.prevent="handleGenerateLink" class="premium-form">
-                    <div class="form-group full-width">
-                      <label>Referencia de Pago *</label>
-                      <input type="text" v-model="paymentForm.reference" required placeholder="Ej. Pago por envío WR12345" />
-                    </div>
-
                     <div class="form-row">
                       <div class="form-group">
-                        <label>Base (Sin Impuestos)</label>
-                        <div class="input-with-icon">
-                          <span>$</span>
-                          <input type="number" v-model.number="paymentForm.amountWithoutTax" min="0" @input="calculateTotals" />
-                        </div>
-                        <small>En centavos (ej: 200 = $2.00)</small>
+                        <label>Referencia de Pago *</label>
+                        <input type="text" v-model="paymentForm.reference" required placeholder="Ej. WR12345" />
                       </div>
-                      
                       <div class="form-group">
-                        <label>Base (Con Impuestos)</label>
+                        <label>Monto Total ($) *</label>
                         <div class="input-with-icon">
                           <span>$</span>
-                          <input type="number" v-model.number="paymentForm.amountWithTax" min="0" @input="calculateTotals" />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="form-row">
-                      <div class="form-group">
-                        <label>Impuesto (IVA)</label>
-                        <div class="input-with-icon">
-                          <span>$</span>
-                          <input type="number" v-model.number="paymentForm.tax" min="0" @input="calculateTotals" />
-                        </div>
-                      </div>
-
-                      <div class="form-group total-group">
-                        <label>Total a Cobrar</label>
-                        <div class="input-with-icon">
-                          <span>$</span>
-                          <input type="number" :value="paymentForm.amount" disabled class="disabled-input" />
+                          <input type="number" v-model.number="displayAmount" min="0.01" step="0.01" required placeholder="0.00" />
                         </div>
                       </div>
                     </div>
@@ -296,8 +275,8 @@ onMounted(() => {
                       {{ errorPayment }}
                     </div>
 
-                    <button type="submit" :disabled="creatingPayment || paymentForm.amount === 0" class="submit-btn">
-                      <span v-if="!creatingPayment">Crear Link de Pago</span>
+                    <button type="submit" :disabled="creatingPayment || !displayAmount || displayAmount <= 0" class="submit-btn">
+                      <span v-if="!creatingPayment">Crear Link de Pago por ${{ (displayAmount || 0).toFixed(2) }}</span>
                       <span v-else class="loader"></span>
                     </button>
                   </form>
@@ -466,7 +445,7 @@ onMounted(() => {
                             <button @click="startEditUser(user)" class="action-btn" title="Editar">
                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                             </button>
-                            <button @click="confirmDeleteUser(user)" class="action-btn delete-btn" title="Eliminar">
+                            <button v-if="user._id !== authStore.currentUser?.userId" @click="confirmDeleteUser(user)" class="action-btn delete-btn" title="Eliminar">
                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                             </button>
                           </td>

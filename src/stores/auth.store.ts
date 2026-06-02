@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 
 export const useAuthStore = defineStore("auth", () => {
@@ -22,10 +22,22 @@ export const useAuthStore = defineStore("auth", () => {
     return token.value !== null;
   };
 
+  const currentUser = computed(() => {
+    if (!token.value) return null;
+    try {
+      const payload = token.value.split(".")[1];
+      if (!payload) return null;
+      return JSON.parse(atob(payload));
+    } catch (e) {
+      return null;
+    }
+  });
+
   return {
     token,
     setToken,
     logout,
     isAuthenticated,
+    currentUser,
   };
 });

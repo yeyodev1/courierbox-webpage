@@ -2,16 +2,14 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { adminApi } from '@/services/admin.api';
-import DateFilter from '@/components/admin/DateFilter.vue';
 import LineChart from '@/components/admin/Charts/LineChart.vue';
 
 const router = useRouter();
 const LOCATION_ID = 'x8O0cXtMCFzNoQ6iYPC6';
 
-// Setup default dates (last 7 days)
+// Setup default dates (Today)
 const defaultEnd = new Date();
 const defaultStart = new Date();
-defaultStart.setDate(defaultStart.getDate() - 30);
 
 const dateRange = ref({
   start: defaultStart.toISOString().split('T')[0] as string,
@@ -35,11 +33,22 @@ const generalMetrics = ref({
   dailyStats: [] as { date: string, count: number }[],
 });
 
+const monthMetrics = ref({
+  activeConversations: 0,
+  overallAvgResponseTimeMs: null as number | null,
+  totalUsers: 0,
+});
+const loadingMonth = ref(true);
+
 const agentsData = ref<any[]>([]);
 const recentConversationsData = ref<any[]>([]);
 const selectedChat = ref<any>(null);
 
 const top10Conversations = computed(() => recentConversationsData.value.slice(0, 10));
+
+
+
+
 
 const openChat = (conv: any) => {
   selectedChat.value = conv;
@@ -81,6 +90,25 @@ const fetchGeneralMetrics = async () => {
   }
 };
 
+const fetchMonthMetrics = async () => {
+  loadingMonth.value = true;
+  const now = new Date();
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+  try {
+    const res = await adminApi.getGeneralMetrics(LOCATION_ID, firstDay, lastDay);
+    monthMetrics.value = {
+      activeConversations: res.data.activeConversations || 0,
+      overallAvgResponseTimeMs: res.data.overallAvgResponseTimeMs,
+      totalUsers: res.data.totalUsers || 0,
+    };
+  } catch (e) {
+    console.error("Error fetching month metrics", e);
+  } finally {
+    loadingMonth.value = false;
+  }
+};
+
 const fetchAgents = async () => {
   loadingAgents.value = true;
   errorAgents.value = '';
@@ -115,14 +143,13 @@ const fetchAll = () => {
 
 onMounted(() => {
   fetchAll();
+  fetchMonthMetrics();
 });
 
 const goBack = () => {
   router.push({ name: 'AdminDashboard' });
 };
-const handleFilterChange = () => {
-  fetchAll();
-};
+
 </script>
 
 <template>
@@ -146,26 +173,17 @@ const handleFilterChange = () => {
       </header>
 
       <main class="dashboard-main">
-        <DateFilter v-model="dateRange" @change="handleFilterChange" />
-
-        <!-- Info Banner for Clarity -->
-        <div class="data-notice">
-          <div class="notice-icon"><i class="fa-solid fa-circle-info"></i></div>
-          <div class="notice-text">
-            <strong>Alcance de los datos:</strong> Estas métricas analizan en tiempo real las últimas 500 conversaciones del CRM para garantizar la máxima velocidad. Si filtras por un rango muy antiguo, es posible que no haya datos si las 500 recientes son más nuevas.
-          </div>
-        </div>
-
-        <div class="grid-layout">
-          <!-- Resumen de Hoy -->
+        <!-- Resumen de las últimas 100 conversaciones -->
+        <div class="grid-layout mt-4">
           <section class="glass-card full-width today-card">
             <div class="card-header today-header">
               <div class="icon-wrapper today-icon">
                 <i class="fa-solid fa-bolt"></i>
               </div>
-              <div>
-                <h2>Rendimiento de Hoy</h2>
-                <p class="section-subtitle">Datos en tiempo real para el día de hoy</p>
+              <div class="title-with-badge">
+                <h2>Métricas - Últimas 100 Conversaciones</h2>
+                <span class="period-badge"><i class="fa-solid fa-chart-line"></i> Últimos 100 Chats</span>
+                <p class="section-subtitle w-100">Análisis detallado sobre las últimas 100 conversaciones gestionadas.</p>
               </div>
             </div>
             
@@ -179,43 +197,43 @@ const handleFilterChange = () => {
             </div>
             <div v-else class="metrics-grid today-grid">
               <div class="metric-box highlight premium-glow">
-                <div class="metric-value">{{ generalMetrics.todayConversations }}</div>
-                <div class="metric-label">Conversaciones de Hoy</div>
+                <div class="metric-value">{{ generalMetrics.activeConversations }}</div>
+                <div class="metric-label">Conversaciones Globales</div>
               </div>
               <div class="metric-box highlight premium-glow">
-                <div class="metric-value">{{ formatTime(generalMetrics.todayAvgResponseTimeMs) }}</div>
-                <div class="metric-label">Prom. Respuesta de Hoy</div>
+                <div class="metric-value">{{ formatTime(generalMetrics.overallAvgResponseTimeMs) }}</div>
+                <div class="metric-label">Promedio de Respuesta</div>
               </div>
             </div>
           </section>
 
-          <!-- Resumen del Período -->
+          <!-- Métricas de Hoy (Separado) -->
           <section class="glass-card full-width">
             <div class="card-header">
               <div class="icon-wrapper">
                 <i class="fa-regular fa-calendar-days"></i>
               </div>
               <div>
-                <h2>Métricas del Período Seleccionado</h2>
-                <p class="section-subtitle">Muestra los totales dentro de las fechas elegidas en el calendario</p>
+                <h2>Métricas de Hoy</h2>
+                <p class="section-subtitle">Rendimiento específico del día en curso (Independiente al historial general)</p>
               </div>
             </div>
             
-            <div v-if="loadingGeneral" class="loading-state">
+            <div v-if="loadingMonth" class="loading-state">
               <span class="loader"></span>
             </div>
-            <div v-else-if="!errorGeneral" class="metrics-grid">
+            <div v-else class="metrics-grid">
               <div class="metric-box">
-                <div class="metric-value">{{ generalMetrics.totalUsers }}</div>
+                <div class="metric-value">{{ monthMetrics.totalUsers }}</div>
                 <div class="metric-label">Agentes Registrados</div>
               </div>
               <div class="metric-box">
-                <div class="metric-value">{{ generalMetrics.activeConversations }}</div>
-                <div class="metric-label">Conv. del Período</div>
+                <div class="metric-value">{{ monthMetrics.activeConversations }}</div>
+                <div class="metric-label">Conversaciones de Hoy</div>
               </div>
               <div class="metric-box">
-                <div class="metric-value">{{ formatTime(generalMetrics.overallAvgResponseTimeMs) }}</div>
-                <div class="metric-label">Prom. Respuesta del Período</div>
+                <div class="metric-value">{{ formatTime(monthMetrics.overallAvgResponseTimeMs) }}</div>
+                <div class="metric-label">Prom. Respuesta de Hoy</div>
               </div>
             </div>
           </section>
@@ -239,14 +257,18 @@ const handleFilterChange = () => {
             </div>
           </section>
 
-          <!-- Lista de Agentes -->
-          <section class="glass-card">
+          <!-- Lista de Agentes (Vista Agente por Agente) -->
+          <section class="glass-card full-width">
             <div class="card-header">
               <div class="icon-wrapper">
-                <i class="fa-solid fa-headset"></i>
+                <i class="fa-solid fa-users"></i>
               </div>
-              <h2>Agentes Activos</h2>
+              <div>
+                <h2>Rendimiento Agente por Agente</h2>
+                <p class="section-subtitle">Métricas individuales extraídas de las últimas 100 conversaciones</p>
+              </div>
             </div>
+            
             <div v-if="loadingAgents" class="loading-state">
               <span class="loader"></span>
               <p>Cargando agentes...</p>
@@ -255,71 +277,63 @@ const handleFilterChange = () => {
               <i class="fa-solid fa-triangle-exclamation"></i>
               {{ errorAgents }}
             </div>
-            <div v-else class="table-container" style="overflow-x: auto; width: 100%;">
-              <div v-if="agentsData.length === 0" class="empty-state">
-                <p>No se encontraron agentes en GHL.</p>
+            <div v-else class="agents-grid">
+              <div v-if="agentsData.length === 0" class="empty-state" style="grid-column: 1 / -1;">
+                <p>No se encontraron agentes en las conversaciones analizadas.</p>
               </div>
-              <table v-else class="premium-table">
-                <thead>
-                  <tr>
-                    <th>Agente</th>
-                    <th class="text-center">Rol</th>
-                    <th class="text-center">Total Conv.</th>
-                    <th class="text-center">Abiertas</th>
-                    <th class="text-center">Cerradas / Otras</th>
-                    <th class="text-center">Prom. Respuesta</th>
-                    <th class="text-center">Alertas CRM</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="user in agentsData" :key="user.id">
-                    <td>
-                      <div class="user-info">
-                        <div class="avatar">{{ user.name?.charAt(0).toUpperCase() || '?' }}</div>
-                        <div>
-                          <div class="cell-title">{{ user.name || 'Sin Nombre' }}</div>
-                          <div class="cell-subtitle">{{ user.email }}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td class="text-center">
-                      <span :class="['role-badge', user.role]">{{ user.role === 'admin' ? 'Admin' : (user.role || 'User') }}</span>
-                    </td>
-                    <td class="text-center">
-                      <span class="stat-pill total">{{ user.total }}</span>
-                    </td>
-                    <td class="text-center">
-                      <span class="stat-pill open">{{ user.open }}</span>
-                    </td>
-                    <td class="text-center">
-                      <span class="stat-pill closed">{{ user.closed }}</span>
-                    </td>
-                    <td class="text-center">
-                      <span class="stat-pill time">
-                        {{ formatTime(user.avgResponseTimeMs) }}
-                      </span>
-                    </td>
-                    <td class="text-center">
-                      <span v-if="user.untrackable > 0" class="stat-pill untrackable" title="Respondidos fuera del CRM">
-                        <i class="fa-solid fa-triangle-exclamation"></i> {{ user.untrackable }} No Trackeable
-                      </span>
-                      <span v-else class="stat-pill ok">
-                        <i class="fa-solid fa-check"></i> Todo OK
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              
+              <div v-for="user in agentsData" :key="user.id" class="agent-card">
+                <div class="agent-card-header">
+                  <div class="agent-avatar">{{ user.name?.charAt(0).toUpperCase() || '?' }}</div>
+                  <div class="agent-info">
+                    <h3>{{ user.name || 'Sin Nombre' }}</h3>
+                    <span :class="['role-badge', user.role]">{{ user.role === 'admin' ? 'Admin' : (user.role || 'User') }}</span>
+                  </div>
+                </div>
+                
+                <div class="agent-stats-grid">
+                  <div class="agent-stat">
+                    <span class="stat-value">{{ user.total }}</span>
+                    <span class="stat-label">Total Conv.</span>
+                  </div>
+                  <div class="agent-stat">
+                    <span class="stat-value text-green">{{ user.open }}</span>
+                    <span class="stat-label">Abiertas</span>
+                  </div>
+                  <div class="agent-stat">
+                    <span class="stat-value text-gray">{{ user.closed }}</span>
+                    <span class="stat-label">Cerradas</span>
+                  </div>
+                </div>
+                
+                <div class="agent-card-footer">
+                  <div class="agent-perf-row">
+                    <i class="fa-regular fa-clock"></i>
+                    <span>Promedio: <strong>{{ formatTime(user.avgResponseTimeMs) }}</strong></span>
+                  </div>
+                  <div v-if="user.untrackable > 0" class="agent-alert-row error">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>{{ user.untrackable }} No Trackeables</span>
+                  </div>
+                  <div v-else class="agent-alert-row success">
+                    <i class="fa-solid fa-check-circle"></i>
+                    <span>Todo trackeado OK</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
 
-          <!-- Conversaciones Recientes -->
-          <section class="glass-card">
+          <!-- Conversaciones del Período -->
+          <section class="glass-card full-width">
             <div class="card-header">
               <div class="icon-wrapper">
                 <i class="fa-regular fa-comments"></i>
               </div>
-              <h2>Últimas Conversaciones</h2>
+              <div>
+                <h2>Historial - Últimas 100 Conversaciones</h2>
+                <p class="section-subtitle">Listado de las últimas conversaciones detectadas</p>
+              </div>
             </div>
             <div v-if="loadingConversations" class="loading-state">
               <span class="loader"></span>
@@ -347,7 +361,7 @@ const handleFilterChange = () => {
                       <div class="cell-title">{{ conv.contactName || conv.contactId || 'Desconocido' }}</div>
                       <div class="cell-subtitle">{{ new Date(conv.dateUpdated).toLocaleDateString() }}</div>
                       <div v-if="conv.answeredOutsideCrm" class="conv-alert mt-1">
-                        <i class="fa-solid fa-triangle-exclamation"></i> Fuera de CRM (No trackeable)
+                        <i class="fa-solid fa-mobile-screen-button"></i> Respuesta Externa
                       </div>
                       <div v-else-if="conv.avgResponseTimeMs !== null" class="conv-alert ok mt-1">
                         <i class="fa-regular fa-clock"></i> Resp. Prom: {{ formatTime(conv.avgResponseTimeMs) }}
@@ -462,6 +476,29 @@ const handleFilterChange = () => {
   font-weight: 600;
 }
 
+/* Period Badge */
+.title-with-badge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+.period-badge {
+  background: rgba($brand-orange, 0.15);
+  color: $brand-orange;
+  font-size: 0.75rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 20px;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: 1px solid rgba($brand-orange, 0.4);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  letter-spacing: 0.5px;
+}
+.w-100 { width: 100%; margin-top: 0.2rem; }
+
 .dashboard-layout {
   position: relative;
   min-height: 100vh;
@@ -470,6 +507,12 @@ const handleFilterChange = () => {
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.filter-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
 }
 
 .dashboard-content {
@@ -789,6 +832,125 @@ const handleFilterChange = () => {
 
 /* Today Card Specific Styles */
 .today-card {
+  background: linear-gradient(145deg, rgba($brand-orange, 0.08), rgba($ink-900, 0.6));
+  border: 1px solid rgba($brand-orange, 0.2);
+}
+
+/* Agents Grid */
+.agents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.agent-card {
+  background: rgba($ink-900, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  transition: all 0.3s ease;
+  &:hover {
+    transform: translateY(-4px);
+    background: rgba($ink-900, 0.8);
+    border-color: rgba($brand-orange, 0.3);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+}
+
+.agent-card-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  
+  .agent-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, $brand-orange, darken($brand-orange, 20%));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: white;
+    box-shadow: 0 4px 10px rgba($brand-orange, 0.2);
+  }
+  
+  .agent-info h3 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.1rem;
+    color: #fff;
+  }
+}
+
+.agent-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  background: rgba(0,0,0,0.2);
+  padding: 1rem;
+  border-radius: 12px;
+  
+  .agent-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    
+    .stat-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+      &.text-green { color: #10B981; }
+      &.text-gray { color: #9CA3AF; }
+    }
+    
+    .stat-label {
+      font-size: 0.7rem;
+      color: #9CA3AF;
+      margin-top: 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  }
+}
+
+.agent-card-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  
+  .agent-perf-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #E5E7EB;
+    i { color: #60A5FA; }
+  }
+  
+  .agent-alert-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 8px;
+    &.error {
+      background: rgba(248, 113, 113, 0.1);
+      color: #F87171;
+    }
+    &.success {
+      background: rgba(16, 185, 129, 0.1);
+      color: #10B981;
+    }
+  }
+}
+
+.metrics-grid {
   background: linear-gradient(135deg, rgba($ink-900, 0.8), rgba($brand-orange, 0.05));
   border: 1px solid rgba($brand-orange, 0.2);
   box-shadow: 0 8px 32px rgba($brand-orange, 0.05);

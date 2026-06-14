@@ -369,33 +369,48 @@ const handleFilterChange = () => {
 
     <!-- Chat Modal Overlay -->
     <div v-if="selectedChat" class="chat-modal-overlay" @click.self="closeChat">
-      <div class="chat-modal">
+      <div class="chat-modal glass-card">
         <div class="chat-header">
           <div class="chat-header-info">
-            <h3>{{ selectedChat.contactName || 'Chat de Contacto' }}</h3>
-            <span class="chat-date">Actualizado: {{ new Date(selectedChat.dateUpdated).toLocaleString() }}</span>
+            <div class="chat-avatar">
+              <i class="fa-solid fa-user"></i>
+            </div>
+            <div class="chat-title-wrap">
+              <h3>{{ selectedChat.contactName || 'Desconocido' }}</h3>
+              <span class="chat-status"><span class="status-dot"></span> {{ selectedChat.status === 'open' ? 'Activo' : 'Cerrado' }}</span>
+            </div>
           </div>
           <button class="close-modal-btn" @click="closeChat">
             <i class="fa-solid fa-times"></i>
           </button>
         </div>
         
-        <div class="chat-body">
+        <div class="chat-body" ref="chatBody">
           <div v-if="!selectedChat.messages || selectedChat.messages.length === 0" class="empty-chat">
-            <i class="fa-regular fa-folder-open"></i>
-            <p>No se encontraron mensajes en esta conversación.</p>
+            <div class="empty-icon-wrapper">
+              <i class="fa-solid fa-lock"></i>
+            </div>
+            <h4>Sin acceso a los mensajes</h4>
+            <p>GoHighLevel no entregó el historial (Error 401). El token actual permite ver la conversación pero no su contenido. Para leer los mensajes, abre el CRM.</p>
           </div>
           <div v-else class="messages-list">
+            <div class="chat-date-divider">
+              <span>Última actualización: {{ new Date(selectedChat.dateUpdated).toLocaleDateString() }}</span>
+            </div>
             <div 
-              v-for="msg in selectedChat.messages" 
-              :key="msg.id" 
+              v-for="(msg, index) in selectedChat.messages" 
+              :key="msg.id || index" 
               class="message-bubble" 
               :class="msg.direction"
             >
-              <div class="msg-content">{{ msg.body }}</div>
+              <div v-if="msg.direction === 'outbound'" class="msg-author">Agente Bakano</div>
+              <div v-else class="msg-author">{{ selectedChat.contactName || 'Cliente' }}</div>
+              
+              <div class="msg-content" v-html="msg.body"></div>
+              
               <div class="msg-meta">
                 <span>{{ new Date(msg.dateAdded).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</span>
-                <span class="msg-status"><i :class="msg.direction === 'inbound' ? 'fa-solid fa-arrow-down' : 'fa-solid fa-arrow-up'"></i></span>
+                <span v-if="msg.direction === 'outbound'" class="msg-status"><i class="fa-solid fa-check-double"></i></span>
               </div>
             </div>
           </div>
@@ -403,7 +418,7 @@ const handleFilterChange = () => {
 
         <div class="chat-footer">
           <button class="btn-primary full-width" @click="openInCrm(selectedChat.id)">
-            Responder en CRM <i class="fa-solid fa-arrow-right"></i>
+            Abrir y Responder en CRM <i class="fa-solid fa-external-link-alt"></i>
           </button>
         </div>
       </div>
@@ -833,123 +848,186 @@ const handleFilterChange = () => {
   }
 }
 
-/* Chat Modal */
+/* Chat Modal - Increible Vista */
 .chat-modal-overlay {
   position: fixed;
   top: 0; left: 0; width: 100vw; height: 100vh;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
-  z-index: 1000;
+  background: rgba(10, 10, 12, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1rem;
+  box-sizing: border-box;
 }
 
 .chat-modal {
-  background: $ink-900;
-  border: 1px solid rgba($ink-400, 0.3);
-  border-radius: 20px;
   width: 100%;
-  max-width: 500px;
-  max-height: 90vh;
+  max-width: 550px;
+  height: 85vh;
+  max-height: 800px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 25px 50px rgba(0,0,0,0.5);
-  animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba($brand-orange, 0.1);
+  animation: modalIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes modalIn {
-  from { opacity: 0; transform: scale(0.95) translateY(20px); }
+  from { opacity: 0; transform: scale(0.95) translateY(30px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .chat-header {
-  padding: 1.25rem 1.5rem;
+  padding: 1rem 1.5rem;
+  background: rgba($ink-900, 0.9);
   border-bottom: 1px solid rgba($ink-400, 0.2);
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
+  backdrop-filter: blur(10px);
+  z-index: 10;
+}
 
-  .chat-header-info h3 { margin: 0; color: $fg-dark; font-size: 1.1rem; }
-  .chat-date { font-size: 0.75rem; color: $muted-dark; }
+.chat-header-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
 
-  .close-modal-btn {
-    background: transparent; border: none; color: $muted-dark;
-    font-size: 1.2rem; cursor: pointer; transition: color 0.2s;
-    &:hover { color: #F87171; }
-  }
+.chat-avatar {
+  width: 45px; height: 45px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, $brand-orange, darken($brand-orange, 20%));
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 1.2rem;
+  box-shadow: 0 4px 10px rgba($brand-orange, 0.3);
+}
+
+.chat-title-wrap h3 {
+  margin: 0 0 0.2rem 0; color: #fff; font-size: 1.1rem; font-weight: 700;
+}
+
+.chat-status {
+  font-size: 0.75rem; color: #9CA3AF; display: flex; align-items: center; gap: 0.3rem;
+}
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: #10B981;
+  box-shadow: 0 0 8px rgba(#10B981, 0.6);
+}
+
+.close-modal-btn {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  color: #9CA3AF; width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.2s;
+  &:hover { background: rgba(248, 113, 113, 0.1); color: #F87171; border-color: rgba(248, 113, 113, 0.3); transform: rotate(90deg); }
 }
 
 .chat-body {
   flex: 1;
   overflow-y: auto;
   padding: 1.5rem;
-  background: rgba($ink-1000, 0.3);
+  background: linear-gradient(180deg, rgba($ink-1000, 0.6) 0%, rgba($ink-900, 0.8) 100%);
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
+.chat-body::-webkit-scrollbar { width: 6px; }
+.chat-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
 .empty-chat {
-  text-align: center; color: $muted-dark; padding: 2rem;
-  i { font-size: 2rem; margin-bottom: 1rem; opacity: 0.5; }
+  margin: auto; text-align: center; color: #9CA3AF; max-width: 80%;
+  .empty-icon-wrapper {
+    width: 80px; height: 80px; border-radius: 50%; background: rgba(248, 113, 113, 0.1);
+    color: #F87171; font-size: 2.5rem; display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.5rem; box-shadow: 0 0 30px rgba(248, 113, 113, 0.1);
+  }
+  h4 { color: #fff; margin: 0 0 0.5rem; font-size: 1.2rem; }
+  p { line-height: 1.5; font-size: 0.9rem; }
+}
+
+.chat-date-divider {
+  text-align: center; margin: 1rem 0 2rem; position: relative;
+  span {
+    background: rgba(255,255,255,0.05); padding: 0.4rem 1rem; border-radius: 20px;
+    font-size: 0.75rem; color: #9CA3AF; border: 1px solid rgba(255,255,255,0.05);
+  }
 }
 
 .messages-list {
-  display: flex; flex-direction: column; gap: 1rem;
+  display: flex; flex-direction: column; gap: 1.2rem;
 }
 
 .message-bubble {
   max-width: 85%;
-  padding: 0.8rem 1rem;
-  border-radius: 16px;
-  font-size: 0.9rem;
-  line-height: 1.4;
   position: relative;
+  animation: bubbleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0; transform: translateY(10px);
   
+  /* Staggered animation */
+  @for $i from 1 through 20 {
+    &:nth-child(#{$i}) { animation-delay: #{$i * 0.05}s; }
+  }
+  
+  .msg-author {
+    font-size: 0.7rem; margin-bottom: 0.3rem; color: #9CA3AF; font-weight: 600;
+  }
+  
+  .msg-content {
+    padding: 0.9rem 1.1rem; font-size: 0.95rem; line-height: 1.5;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    word-break: break-word;
+  }
+
   &.inbound {
     align-self: flex-start;
-    background: rgba($ink-700, 0.8);
-    color: $fg-dark;
-    border-bottom-left-radius: 4px;
+    .msg-author { margin-left: 0.5rem; }
+    .msg-content {
+      background: #1F2937; color: #F3F4F6;
+      border-radius: 18px 18px 18px 4px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
   }
   
   &.outbound {
     align-self: flex-end;
-    background: rgba($brand-orange, 0.15);
-    border: 1px solid rgba($brand-orange, 0.3);
-    color: $brand-orange;
-    border-bottom-right-radius: 4px;
+    .msg-author { text-align: right; margin-right: 0.5rem; color: $brand-orange; }
+    .msg-content {
+      background: linear-gradient(135deg, $brand-orange, darken($brand-orange, 10%));
+      color: #fff;
+      border-radius: 18px 18px 4px 18px;
+    }
   }
 
   .msg-meta {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.65rem;
-    margin-top: 0.4rem;
-    opacity: 0.7;
+    display: flex; justify-content: flex-end; align-items: center; gap: 0.4rem;
+    font-size: 0.65rem; margin-top: 0.3rem; opacity: 0.7;
+    .msg-status { color: #60A5FA; }
   }
+}
+
+@keyframes bubbleIn {
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .chat-footer {
   padding: 1.25rem 1.5rem;
+  background: rgba($ink-900, 0.9);
   border-top: 1px solid rgba($ink-400, 0.2);
+  backdrop-filter: blur(10px);
 
   .btn-primary {
-    background: linear-gradient(135deg, $brand-orange, darken($brand-orange, 10%));
-    color: #fff;
-    border: none;
-    padding: 0.8rem;
-    border-radius: 12px;
-    font-weight: 600;
-    cursor: pointer;
+    background: linear-gradient(135deg, #10B981, #059669);
+    color: #fff; border: none; padding: 1rem; border-radius: 12px;
+    font-weight: 600; font-size: 1rem; cursor: pointer;
     display: flex; justify-content: center; align-items: center; gap: 0.5rem;
-    transition: all 0.2s;
-    &:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba($brand-orange, 0.3); }
+    transition: all 0.2s; box-shadow: 0 4px 15px rgba(#10B981, 0.2);
+    &:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(#10B981, 0.4); }
   }
 }
-
-.full-width { width: 100%; }
 </style>

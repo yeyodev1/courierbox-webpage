@@ -63,7 +63,7 @@ class AdminAPI extends APIBase {
   }
 
   async getGeneralMetrics(locationId: string, startDate?: string, endDate?: string) {
-    let url = `admin/metrics/general?locationId=${locationId}`;
+    let url = `admin/metrics/general?locationId=${locationId}&_t=${Date.now()}`;
     if (startDate) url += `&startDate=${startDate}`;
     if (endDate) url += `&endDate=${endDate}`;
     
@@ -71,8 +71,14 @@ class AdminAPI extends APIBase {
     return res.data;
   }
 
+  async getDailyChartMetrics(locationId: string) {
+    const url = `admin/metrics/chart-data?locationId=${locationId}&_t=${Date.now()}`;
+    const res = await this.get<any>(url);
+    return res.data;
+  }
+
   async getActiveAgents(locationId: string, startDate?: string, endDate?: string) {
-    let url = `admin/metrics/agents?locationId=${locationId}`;
+    let url = `admin/metrics/agents?locationId=${locationId}&_t=${Date.now()}`;
     if (startDate) url += `&startDate=${startDate}`;
     if (endDate) url += `&endDate=${endDate}`;
     
@@ -81,7 +87,7 @@ class AdminAPI extends APIBase {
   }
 
   async getRecentConversations(locationId: string, startDate?: string, endDate?: string) {
-    let url = `admin/metrics/recent-conversations?locationId=${locationId}`;
+    let url = `admin/metrics/recent-conversations?locationId=${locationId}&_t=${Date.now()}`;
     if (startDate) url += `&startDate=${startDate}`;
     if (endDate) url += `&endDate=${endDate}`;
     

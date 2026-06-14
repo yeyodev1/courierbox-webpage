@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { adminApi } from '@/services/admin.api';
-import LineChart from '@/components/admin/Charts/LineChart.vue';
+import BarChart from '@/components/admin/Charts/BarChart.vue';
 
 const router = useRouter();
 const LOCATION_ID = 'x8O0cXtMCFzNoQ6iYPC6';
@@ -30,7 +30,6 @@ const generalMetrics = ref({
   todayConversations: 0,
   overallAvgResponseTimeMs: null as number | null,
   todayAvgResponseTimeMs: null as number | null,
-  dailyStats: [] as { date: string, count: number }[],
 });
 
 const monthMetrics = ref({
@@ -61,7 +60,8 @@ const closeChat = () => {
 const openInCrm = (convId: string) => {
   window.open(`https://crm.bakano.ec/v2/location/${LOCATION_ID}/conversations/conversations/${convId}`, '_blank');
 };
-
+const chartData = ref<{date: string, count: number}[]>([]);
+const loadingChart = ref(false);
 const formatTime = (ms: number | null) => {
   if (ms === null || ms === undefined || isNaN(ms)) return 'N/A';
   const minutes = Math.floor(ms / 60000);
@@ -81,12 +81,23 @@ const fetchGeneralMetrics = async () => {
       todayConversations: res.data.todayConversations || 0,
       overallAvgResponseTimeMs: res.data.overallAvgResponseTimeMs,
       todayAvgResponseTimeMs: res.data.todayAvgResponseTimeMs,
-      dailyStats: res.data.dailyStats || [],
     };
   } catch (err: any) {
     errorGeneral.value = err.message || 'Error al cargar métricas generales';
   } finally {
     loadingGeneral.value = false;
+  }
+};
+
+const fetchChartData = async () => {
+  loadingChart.value = true;
+  try {
+    const res = await adminApi.getDailyChartMetrics(LOCATION_ID);
+    chartData.value = res.data || [];
+  } catch (e) {
+    console.error("Error fetching chart data", e);
+  } finally {
+    loadingChart.value = false;
   }
 };
 
@@ -135,15 +146,18 @@ const fetchRecentConversations = async () => {
   }
 };
 
-const fetchAll = () => {
-  fetchGeneralMetrics();
-  fetchAgents();
-  fetchRecentConversations();
+const fetchAll = async () => {
+  await Promise.all([
+    fetchGeneralMetrics(),
+    fetchMonthMetrics(),
+    fetchAgents(),
+    fetchRecentConversations(),
+    fetchChartData()
+  ]);
 };
 
 onMounted(() => {
   fetchAll();
-  fetchMonthMetrics();
 });
 
 const goBack = () => {
@@ -244,16 +258,19 @@ const goBack = () => {
               <div class="icon-wrapper">
                 <i class="fa-solid fa-chart-area"></i>
               </div>
-              <h2>Contactos / Conversaciones por Día</h2>
+              <div>
+                <h2>Distribución de los Últimos 100 Chats</h2>
+                <p class="section-subtitle">Días en los que ocurrieron estas 100 conversaciones recientes</p>
+              </div>
             </div>
-            <div v-if="loadingGeneral" class="loading-state">
+            <div v-if="loadingChart" class="loading-state">
               <span class="loader"></span>
             </div>
-            <div v-else-if="generalMetrics.dailyStats.length > 0">
-              <LineChart :data="generalMetrics.dailyStats" />
+            <div v-else-if="chartData.length > 0">
+              <BarChart :data="chartData" />
             </div>
             <div v-else class="empty-state">
-              <p>No hay datos en este rango de fechas.</p>
+              <p>No hay suficientes datos para graficar la distribución.</p>
             </div>
           </section>
 

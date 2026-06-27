@@ -518,12 +518,8 @@ const goBack = () => {
 
 .dashboard-layout {
   position: relative;
-  min-height: 100vh;
-  background-color: $ink-1000;
   color: $fg-dark;
   overflow-x: hidden;
-  display: flex;
-  flex-direction: column;
 }
 
 .filter-wrapper {
@@ -537,7 +533,6 @@ const goBack = () => {
   z-index: 10;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
 }
 
 .bg-shape {

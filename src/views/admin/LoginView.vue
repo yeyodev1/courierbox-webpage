@@ -18,7 +18,8 @@ const handleLogin = async () => {
   try {
     const res = await adminApi.login(email.value, password.value);
     authStore.setToken(res.token);
-    router.push({ name: 'AdminDashboard' });
+    const role = res.user?.role;
+    router.push({ name: role === 'asesor' ? 'AsesorDashboard' : 'AdminDashboard' });
   } catch (err: any) {
     error.value = err.message || 'Error al iniciar sesión';
   } finally {

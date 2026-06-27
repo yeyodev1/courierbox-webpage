@@ -94,6 +94,15 @@ class AdminAPI extends APIBase {
     const res = await this.get<any>(url);
     return res.data;
   }
+  async getData(endpoint: string) {
+    const res = await this.get<any>(endpoint);
+    return res.data;
+  }
+
+  async postData(endpoint: string, data: unknown) {
+    const res = await this.post<any>(endpoint, data);
+    return res.data;
+  }
 }
 
 export const adminApi = new AdminAPI();

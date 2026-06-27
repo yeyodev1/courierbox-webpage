@@ -33,11 +33,18 @@ export const useAuthStore = defineStore("auth", () => {
     }
   });
 
+  const userRole = computed(() => (currentUser.value?.role as string | undefined) || null);
+  const isAdmin = computed(() => userRole.value === "admin");
+  const isAsesor = computed(() => userRole.value === "asesor");
+
   return {
     token,
     setToken,
     logout,
     isAuthenticated,
     currentUser,
+    userRole,
+    isAdmin,
+    isAsesor,
   };
 });

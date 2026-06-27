@@ -20,8 +20,9 @@ const links = [
   { num: "02", to: "/servicios", label: "Servicios", kicker: "USA · España → Ecuador", art: "services" },
   { num: "03", to: "/cotizar", label: "Cotizar", kicker: "Calcula tu envío en segundos", art: "quote" },
   { num: "04", to: "/rastrear", label: "Rastrear", kicker: "Estado en vivo de tu envío", art: "track" },
-  { num: "05", to: "/nosotros", label: "Nosotros", kicker: "Operamos cada eslabón", art: "about" },
-  { num: "06", to: "/contacto", label: "Contacto", kicker: "Respuesta en minutos", art: "contact" },
+  { num: "05", to: "/pagos", label: "Mis Pagos", kicker: "Deudas y comprobantes", art: "payment" },
+  { num: "06", to: "/nosotros", label: "Nosotros", kicker: "Operamos cada eslabón", art: "about" },
+  { num: "07", to: "/contacto", label: "Contacto", kicker: "Respuesta en minutos", art: "contact" },
 ];
 
 const waLink = whatsappUrl();

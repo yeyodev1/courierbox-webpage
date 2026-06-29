@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
+import AppButton from '@/components/ui/AppButton.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -27,7 +28,6 @@ const menuGroups = [
       { path: '/admin/purchase-orders', label: 'Pendientes de Compra', icon: 'fa-solid fa-cart-shopping', match: (p: string) => p.startsWith('/admin/purchase-orders') },
       { path: '/admin/envios', label: 'Envíos a Domicilio', icon: 'fa-solid fa-truck', match: (p: string) => p.startsWith('/admin/envios') },
       { path: '/admin/contactos', label: 'Contactos', icon: 'fa-solid fa-address-book', match: (p: string) => p.startsWith('/admin/contactos') },
-      { path: '/admin/tracking', label: 'Tracking Interno', icon: 'fa-solid fa-magnifying-glass-location', match: (p: string) => p.startsWith('/admin/tracking') },
     ],
   },
   {
@@ -81,17 +81,26 @@ function navigate(path: string) {
   router.push(path)
   sidebarMobileOpen.value = false
 }
+
+function handleLogoutKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') showLogoutConfirm.value = false
+}
 </script>
 
 <template>
   <div class="admin-shell" :class="{ 'sidebar-collapsed': !sidebarExpanded }">
     <!-- Mobile overlay -->
     <transition name="fade">
-      <div v-if="sidebarMobileOpen" class="mobile-overlay" @click="sidebarMobileOpen = false" />
+      <div
+        v-if="sidebarMobileOpen"
+        class="mobile-overlay"
+        aria-hidden="true"
+        @click="sidebarMobileOpen = false"
+      />
     </transition>
 
     <!-- ===== SIDEBAR ===== -->
-    <aside class="sidebar" :class="{ 'mobile-open': sidebarMobileOpen }">
+    <aside class="sidebar" :class="{ 'mobile-open': sidebarMobileOpen }" aria-label="Barra de navegación">
       <div class="sidebar-brand">
         <div class="brand-icon">
           <span class="logo-mark">C</span>
@@ -102,43 +111,44 @@ function navigate(path: string) {
         </div>
         <button
           class="collapse-btn"
+          :aria-label="sidebarExpanded ? 'Colapsar sidebar' : 'Expandir sidebar'"
           @click="sidebarExpanded = !sidebarExpanded"
-          :title="sidebarExpanded ? 'Colapsar' : 'Expandir'"
         >
-          <i class="fa-solid fa-chevron-left" :class="{ rotated: !sidebarExpanded }" />
+          <i class="fa-solid fa-chevron-left" aria-hidden="true" :class="{ rotated: !sidebarExpanded }" />
         </button>
       </div>
 
-      <nav class="sidebar-nav">
-        <template v-for="group in menuGroups" :key="group.label">
+      <nav class="sidebar-nav" aria-label="Secciones de administración">
+        <template v-for="(group, gi) in menuGroups" :key="group.label">
           <span class="nav-section-label" v-show="sidebarExpanded">{{ group.label }}</span>
           <button
             v-for="item in group.items"
             :key="item.path"
             class="nav-item"
             :class="{ active: item.match(currentPath) }"
+            :aria-current="item.match(currentPath) ? 'page' : undefined"
             @click="navigate(item.path)"
             :title="!sidebarExpanded ? item.label : ''"
           >
-            <div class="nav-icon-wrapper">
-              <i :class="item.icon" />
-            </div>
+            <span class="nav-icon-wrapper">
+              <i :class="item.icon" aria-hidden="true" />
+            </span>
             <span class="nav-label" v-show="sidebarExpanded">{{ item.label }}</span>
           </button>
-          <div class="nav-divider" v-show="sidebarExpanded" v-if="group !== menuGroups[menuGroups.length - 1]" />
+          <div v-if="gi < menuGroups.length - 1" class="nav-divider" v-show="sidebarExpanded" />
         </template>
       </nav>
 
       <div class="sidebar-footer">
         <div class="sidebar-user">
-          <div class="user-avatar-mini">{{ userInitial }}</div>
+          <span class="user-avatar-mini">{{ userInitial }}</span>
           <div class="user-info-text" v-show="sidebarExpanded">
             <span class="user-name">{{ userDisplayName }}</span>
             <span class="user-email">{{ userEmail }}</span>
           </div>
         </div>
-        <button class="logout-icon-btn" @click="showLogoutConfirm = true" title="Cerrar sesión">
-          <i class="fa-solid fa-right-from-bracket" />
+        <button class="logout-icon-btn" aria-label="Cerrar sesión" @click="showLogoutConfirm = true">
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true" />
         </button>
       </div>
     </aside>
@@ -147,22 +157,30 @@ function navigate(path: string) {
     <div class="main-area">
       <header class="top-bar">
         <div class="top-bar-left">
-          <button class="hamburger" @click="sidebarMobileOpen = true">
-            <i class="fa-solid fa-bars" />
+          <button class="hamburger" aria-label="Abrir menú de navegación" @click="sidebarMobileOpen = true">
+            <i class="fa-solid fa-bars" aria-hidden="true" />
           </button>
           <div class="page-title-group">
-            <h2 class="page-title">{{ pageMeta.title }}</h2>
+            <h1 class="page-title">{{ pageMeta.title }}</h1>
             <p class="page-subtitle">{{ pageMeta.sub }}</p>
           </div>
         </div>
         <div class="top-bar-right">
-          <div class="user-avatar" @click="showLogoutConfirm = true" :title="userDisplayName">
+          <span
+            class="user-avatar"
+            :title="userDisplayName"
+            tabindex="0"
+            role="button"
+            aria-label="Abrir opciones de usuario"
+            @click="showLogoutConfirm = true"
+            @keydown.enter="showLogoutConfirm = true"
+          >
             {{ userInitial }}
-          </div>
+          </span>
         </div>
       </header>
 
-      <main class="main-content">
+      <main class="main-content" id="admin-main-content">
         <router-view v-slot="{ Component }">
           <transition name="fade-slide" mode="out-in">
             <component :is="Component" />
@@ -173,14 +191,24 @@ function navigate(path: string) {
 
     <!-- ===== LOGOUT MODAL ===== -->
     <transition name="fade">
-      <div v-if="showLogoutConfirm" class="modal-overlay" @click.self="showLogoutConfirm = false">
+      <div
+        v-if="showLogoutConfirm"
+        class="modal-overlay"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="logout-modal-title"
+        @click.self="showLogoutConfirm = false"
+        @keydown.escape="handleLogoutKeydown"
+      >
         <div class="modal-card">
-          <div class="modal-icon-box warn"><i class="fa-solid fa-right-from-bracket" /></div>
-          <h3>Cerrar Sesión</h3>
+          <div class="modal-icon-box warn">
+            <i class="fa-solid fa-right-from-bracket" aria-hidden="true" />
+          </div>
+          <h3 id="logout-modal-title" class="modal-title">Cerrar Sesión</h3>
           <p>¿Estás seguro de que deseas cerrar sesión?</p>
           <div class="modal-actions">
-            <button class="btn-ghost" @click="showLogoutConfirm = false">Cancelar</button>
-            <button class="btn-danger" @click="authStore.logout()">Sí, cerrar</button>
+            <AppButton variant="outline" @click="showLogoutConfirm = false">Cancelar</AppButton>
+            <AppButton variant="primary" @click="authStore.logout()">Sí, cerrar sesión</AppButton>
           </div>
         </div>
       </div>
@@ -315,6 +343,11 @@ function navigate(path: string) {
       color: $fg-dark;
     }
 
+    &:focus-visible {
+      outline: 2px solid $brand-orange;
+      outline-offset: 2px;
+    }
+
     i {
       transition: transform 0.3s ease;
       &.rotated {
@@ -367,6 +400,11 @@ function navigate(path: string) {
     text-align: left;
     position: relative;
     font-family: inherit;
+
+    &:focus-visible {
+      outline: 2px solid $brand-orange;
+      outline-offset: -2px;
+    }
 
     .nav-icon-wrapper {
       width: 36px;
@@ -489,6 +527,11 @@ function navigate(path: string) {
     transition: all 0.2s;
     flex-shrink: 0;
 
+    &:focus-visible {
+      outline: 2px solid $brand-orange;
+      outline-offset: 2px;
+    }
+
     &:hover {
       background: rgba($signal-red, 0.1);
       color: #ff8a8f;
@@ -551,6 +594,11 @@ function navigate(path: string) {
         color: $fg-dark;
         cursor: pointer;
         font-size: 1rem;
+
+        &:focus-visible {
+          outline: 2px solid $brand-orange;
+          outline-offset: 2px;
+        }
       }
     }
 
@@ -583,6 +631,11 @@ function navigate(path: string) {
       font-weight: 700;
       font-size: 0.85rem;
       cursor: pointer;
+
+      &:focus-visible {
+        outline: 2px solid $brand-orange;
+        outline-offset: 2px;
+      }
     }
   }
 }
@@ -618,7 +671,6 @@ function navigate(path: string) {
   padding: $space-8;
   max-width: 420px;
   width: 100%;
-  text-align: center;
 
   .modal-icon-box {
     width: 48px;
@@ -627,15 +679,16 @@ function navigate(path: string) {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto $space-4;
+    margin: 0 0 $space-4;
     font-size: 1.2rem;
 
     &.warn { background: rgba($signal-amber, 0.12); color: $signal-amber; }
   }
 
-  h3 {
+  .modal-title {
     font-size: 1.15rem;
     margin: 0 0 $space-2;
+    text-align: left;
   }
 
   p {
@@ -645,46 +698,13 @@ function navigate(path: string) {
   }
 
   .modal-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    justify-content: flex-end;
     gap: $space-3;
 
     @media (max-width: 640px) {
-      grid-template-columns: 1fr;
+      flex-direction: column;
     }
-  }
-}
-
-.btn-ghost {
-  padding: 0.75rem 1.5rem;
-  background: transparent;
-  border: 1px solid rgba($ink-500, 0.3);
-  border-radius: 10px;
-  color: $ink-300;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.9rem;
-
-  &:hover {
-    background: rgba($ink-500, 0.15);
-    color: $fg-dark;
-  }
-}
-
-.btn-danger {
-  padding: 0.75rem 1.5rem;
-  background: $signal-red;
-  border: none;
-  border-radius: 10px;
-  color: #fff;
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: all 0.2s;
-
-  &:hover {
-    background: darken($signal-red, 8%);
   }
 }
 

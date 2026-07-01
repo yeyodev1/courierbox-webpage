@@ -259,6 +259,7 @@ function handleLogoutKeydown(e: KeyboardEvent) {
   min-height: 100vh;
   background: $ink-1000;
   color: $fg-dark;
+  overflow-x: hidden;
 }
 
 // ─── SIDEBAR ──────────────────────────────────────────
@@ -609,6 +610,7 @@ function handleLogoutKeydown(e: KeyboardEvent) {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-width: 0;
 
   .sidebar-collapsed & {
     margin-left: 72px;
@@ -706,6 +708,8 @@ function handleLogoutKeydown(e: KeyboardEvent) {
   flex: 1;
   padding: $space-8;
   overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
 
   @media (max-width: 768px) {
     padding: $space-4;

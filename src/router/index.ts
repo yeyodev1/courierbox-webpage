@@ -93,7 +93,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: "costos",
         name: "AdminCostos",
-        component: () => import("@/views/admin/AdminCostosView.vue"),
+        component: () => import("@/views/admin/Costos/CostosIndex.vue"),
         meta: { title: "Costos y Gastos · Courier Box" },
       },
       {

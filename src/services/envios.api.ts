@@ -101,14 +101,7 @@ class EnviosAPI extends APIBase {
   }
 
   async remove(id: string) {
-    const token = localStorage.getItem('admin_token') || localStorage.getItem('access_token')
-    const raw = (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8101/api'
-    const baseUrl = raw.replace(/\/+$/, '')
-    const url = (baseUrl.endsWith('/api') || /\/api\//.test(baseUrl) ? baseUrl : `${baseUrl}/api`)
-    await fetch(`${url}/v1/envios/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    await this.delete(`v1/envios/${id}`)
   }
 
   async buscarPaquetes(q: string) {

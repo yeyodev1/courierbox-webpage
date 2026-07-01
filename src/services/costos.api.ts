@@ -1,5 +1,11 @@
 import APIBase from './httpBase'
 
+export interface GastoAuditUser {
+  _id: string
+  name: string
+  email: string
+}
+
 export interface Gasto {
   _id: string
   tipo: 'operacional' | 'logistico' | 'envio'
@@ -17,7 +23,8 @@ export interface Gasto {
   valorTotal: number
   valorPagado: number
   paqueteId?: string
-  creadoPor: { _id: string; name: string; email: string }
+  creadoPor: GastoAuditUser | string
+  updatedBy?: GastoAuditUser | string | null
   createdAt: string
   updatedAt: string
 }
@@ -126,14 +133,7 @@ class CostosAPI extends APIBase {
   }
 
   async remove(id: string) {
-    const token = localStorage.getItem('admin_token') || localStorage.getItem('access_token')
-    const raw = (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8101/api'
-    const baseUrl = raw.replace(/\/+$/, '')
-    const url = (baseUrl.endsWith('/api') || /\/api\//.test(baseUrl) ? baseUrl : `${baseUrl}/api`)
-    await fetch(`${url}/v1/costos/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    await this.delete(`v1/costos/${id}`)
   }
 }
 

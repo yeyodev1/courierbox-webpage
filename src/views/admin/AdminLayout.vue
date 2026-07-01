@@ -11,45 +11,70 @@ const authStore = useAuthStore()
 const sidebarExpanded = ref(true)
 const sidebarMobileOpen = ref(false)
 const showLogoutConfirm = ref(false)
+const currentRole = computed(() => authStore.userRole || 'admin')
+const basePath = computed(() => (currentRole.value === 'superadmin' ? '/superadmin' : '/admin'))
 
-const menuGroups = [
-  {
-    label: 'Navegación',
-    items: [
-      { path: '/admin', label: 'Dashboard', icon: 'fa-solid fa-chart-pie', match: (p: string) => p === '/admin' },
-      { path: '/admin/payments', label: 'Links de Pago', icon: 'fa-solid fa-link', match: (p: string) => p.startsWith('/admin/payments') },
-      { path: '/admin/users', label: 'Usuarios', icon: 'fa-solid fa-users', match: (p: string) => p.startsWith('/admin/users') },
-      { path: '/admin/tracking', label: 'Tracking Interno', icon: 'fa-solid fa-magnifying-glass-location', match: (p: string) => p.startsWith('/admin/tracking') },
-    ],
-  },
-  {
-    label: 'Operaciones',
-    items: [
-      { path: '/admin/purchase-orders', label: 'Pendientes de Compra', icon: 'fa-solid fa-cart-shopping', match: (p: string) => p.startsWith('/admin/purchase-orders') },
-      { path: '/admin/envios', label: 'Envíos a Domicilio', icon: 'fa-solid fa-truck', match: (p: string) => p.startsWith('/admin/envios') },
-      { path: '/admin/contactos', label: 'Contactos', icon: 'fa-solid fa-address-book', match: (p: string) => p.startsWith('/admin/contactos') },
-    ],
-  },
-  {
-    label: 'Asesores',
-    items: [
-      { path: '/admin/fee-config', label: 'Tarifas', icon: 'fa-solid fa-calculator', match: (p: string) => p.startsWith('/admin/fee-config') },
-    ],
-  },
-  {
-    label: 'Financiero',
-    items: [
-      { path: '/admin/costos', label: 'Costos y Gastos', icon: 'fa-solid fa-coins', match: (p: string) => p.startsWith('/admin/costos') },
-      { path: '/admin/conciliacion', label: 'Conciliación', icon: 'fa-solid fa-file-invoice', match: (p: string) => p.startsWith('/admin/conciliacion') },
-    ],
-  },
-  {
-    label: 'Módulos',
-    items: [
-      { path: '/admin/metrics', label: 'Métricas GHL', icon: 'fa-solid fa-chart-line', match: (p: string) => p.startsWith('/admin/metrics') },
-    ],
-  },
-]
+function p(path: string) {
+  return `${basePath.value}${path}`
+}
+
+const menuGroups = computed(() => {
+  if (currentRole.value === 'superadmin') {
+    return [
+      {
+        label: 'Privado',
+        items: [
+          { path: p(''), label: 'Dashboard Ejecutivo', icon: 'fa-solid fa-chart-line', match: (routePath: string) => routePath.startsWith('/superadmin') },
+          { path: p('/reportes'), label: 'Estado de Resultados', icon: 'fa-solid fa-file-invoice-dollar', match: (routePath: string) => routePath.startsWith('/superadmin/reportes') },
+          { path: p('/produccion'), label: 'Producción Diaria', icon: 'fa-solid fa-clipboard-list', match: (routePath: string) => routePath.startsWith('/superadmin/produccion') },
+          { path: p('/caja'), label: 'Caja', icon: 'fa-solid fa-vault', match: (routePath: string) => routePath.startsWith('/superadmin/caja') },
+        ],
+      },
+    ]
+  }
+
+  return [
+    {
+      label: 'Navegación',
+      items: [
+        { path: p(''), label: 'Dashboard', icon: 'fa-solid fa-chart-pie', match: (routePath: string) => routePath === basePath.value },
+        { path: p('/payments'), label: 'Links de Pago', icon: 'fa-solid fa-link', match: (routePath: string) => routePath.startsWith(`${basePath.value}/payments`) },
+        { path: p('/users'), label: 'Usuarios', icon: 'fa-solid fa-users', match: (routePath: string) => routePath.startsWith(`${basePath.value}/users`) },
+        { path: p('/tracking'), label: 'Tracking Interno', icon: 'fa-solid fa-magnifying-glass-location', match: (routePath: string) => routePath.startsWith(`${basePath.value}/tracking`) },
+      ],
+    },
+    {
+      label: 'Operaciones',
+      items: [
+        { path: p('/purchase-orders'), label: 'Pendientes de Compra', icon: 'fa-solid fa-cart-shopping', match: (routePath: string) => routePath.startsWith(`${basePath.value}/purchase-orders`) },
+        { path: p('/envios'), label: 'Envíos', icon: 'fa-solid fa-truck', match: (routePath: string) => routePath.startsWith(`${basePath.value}/envios`) },
+        { path: p('/contactos'), label: 'Contactos', icon: 'fa-solid fa-address-book', match: (routePath: string) => routePath.startsWith(`${basePath.value}/contactos`) },
+      ],
+    },
+        {
+          label: 'Finanzas',
+          items: [
+            { path: p('/costos'), label: 'Costos y Gastos', icon: 'fa-solid fa-coins', match: (routePath: string) => routePath.startsWith(`${basePath.value}/costos`) },
+            { path: p('/proveedores'), label: 'Proveedores', icon: 'fa-solid fa-truck-fast', match: (routePath: string) => routePath.startsWith(`${basePath.value}/proveedores`) },
+            { path: p('/caja'), label: 'Caja', icon: 'fa-solid fa-vault', match: (routePath: string) => routePath.startsWith(`${basePath.value}/caja`) },
+            { path: p('/reportes'), label: 'Estado de Resultados', icon: 'fa-solid fa-file-invoice-dollar', match: (routePath: string) => routePath.startsWith(`${basePath.value}/reportes`) },
+          ],
+        },
+    {
+      label: 'Producción',
+      items: [
+        { path: p('/produccion'), label: 'Producción Diaria', icon: 'fa-solid fa-clipboard-list', match: (routePath: string) => routePath.startsWith(`${basePath.value}/produccion`) },
+        { path: p('/conciliacion'), label: 'Conciliación', icon: 'fa-solid fa-file-invoice', match: (routePath: string) => routePath.startsWith(`${basePath.value}/conciliacion`) },
+      ],
+    },
+    {
+      label: 'Asesores',
+      items: [
+        { path: p('/fee-config'), label: 'Tarifas', icon: 'fa-solid fa-calculator', match: (routePath: string) => routePath.startsWith(`${basePath.value}/fee-config`) },
+      ],
+    },
+  ]
+})
 
 const currentPath = computed(() => route.path)
 
@@ -59,20 +84,29 @@ const userDisplayName = computed(() => {
 })
 const userEmail = computed(() => authStore.currentUser?.email || '')
 const userInitial = computed(() => userDisplayName.value.charAt(0).toUpperCase())
+const roleLabel = computed(() => (currentRole.value === 'superadmin' ? 'Private Suite' : currentRole.value === 'gerencia' ? 'Gerencia' : 'Admin Panel'))
 
 const pageMeta = computed(() => {
   const map: Record<string, { title: string; sub: string }> = {
     '/admin': { title: 'Dashboard', sub: 'Resumen general del sistema' },
+    '/superadmin': { title: 'Dashboard Ejecutivo', sub: 'Control privado y visión ejecutiva' },
     '/admin/payments': { title: 'Links de Pago', sub: 'Genera y administra links de pago' },
     '/admin/users': { title: 'Usuarios', sub: 'Administra los miembros del equipo' },
     '/admin/tracking': { title: 'Tracking Interno', sub: 'Consulta el estado de los envíos' },
     '/admin/fee-config': { title: 'Configuración de tarifas', sub: 'Define el fee de gestión para asesores' },
     '/admin/purchase-orders': { title: 'Pendientes de Compra', sub: 'Revisa y gestiona las órdenes pendientes de comprar' },
     '/admin/costos': { title: 'Costos y Gastos', sub: 'Registra costos operacionales, logísticos y de envío' },
+    '/admin/proveedores': { title: 'Proveedores', sub: 'Crea y administra los proveedores conectados a costos y envíos' },
     '/admin/envios': { title: 'Envíos a Domicilio', sub: 'Gestiona los envíos de última milla' },
+    '/admin/caja': { title: 'Caja', sub: 'Movimientos de ingreso y egreso' },
+    '/admin/produccion': { title: 'Producción Diaria', sub: 'Registro diario de producción y CRM' },
+    '/admin/reportes': { title: 'Estado de Resultados', sub: 'Resultados, gastos y flujo real' },
     '/admin/contactos': { title: 'Contactos', sub: 'Busca clientes, revisa órdenes e historial de gestión' },
     '/admin/conciliacion': { title: 'Conciliación Bancaria', sub: 'Cruza pagos con transacciones bancarias' },
     '/admin/metrics': { title: 'Métricas GHL', sub: 'Métricas de GoHighLevel' },
+    '/superadmin/reportes': { title: 'Estado de Resultados', sub: 'Visión ejecutiva privada' },
+    '/superadmin/produccion': { title: 'Producción Diaria', sub: 'Control privado de producción' },
+    '/superadmin/caja': { title: 'Caja', sub: 'Seguimiento financiero privado' },
   }
   return map[route.path] || { title: 'Admin', sub: '' }
 })
@@ -107,7 +141,7 @@ function handleLogoutKeydown(e: KeyboardEvent) {
         </div>
         <div class="brand-text" v-show="sidebarExpanded">
           <span class="brand-name">Courier Box</span>
-          <span class="brand-role">Admin Panel</span>
+          <span class="brand-role">{{ roleLabel }}</span>
         </div>
         <button
           class="collapse-btn"
@@ -118,7 +152,7 @@ function handleLogoutKeydown(e: KeyboardEvent) {
         </button>
       </div>
 
-      <nav class="sidebar-nav" aria-label="Secciones de administración">
+      <nav class="sidebar-nav" aria-label="Secciones de administración" data-lenis-prevent data-lenis-prevent-wheel data-lenis-prevent-touch>
         <template v-for="(group, gi) in menuGroups" :key="group.label">
           <span class="nav-section-label" v-show="sidebarExpanded">{{ group.label }}</span>
           <button
@@ -368,7 +402,34 @@ function handleLogoutKeydown(e: KeyboardEvent) {
   flex-direction: column;
   gap: 2px;
   padding: $space-4 $space-3;
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+  touch-action: pan-y;
+  pointer-events: auto;
+
+  &::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba($ink-500, 0.28);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba($ink-400, 0.38);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
 
   .nav-section-label {
     font-size: 0.65rem;

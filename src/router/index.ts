@@ -97,6 +97,30 @@ const routes: RouteRecordRaw[] = [
         meta: { title: "Costos y Gastos · Courier Box" },
       },
       {
+        path: "proveedores",
+        name: "AdminProveedores",
+        component: () => import("@/views/admin/AdminProveedoresView.vue"),
+        meta: { title: "Proveedores · Courier Box" },
+      },
+      {
+        path: "caja",
+        name: "AdminCaja",
+        component: () => import("@/views/admin/AdminCajaView.vue"),
+        meta: { title: "Caja · Courier Box" },
+      },
+      {
+        path: "produccion",
+        name: "AdminProduccion",
+        component: () => import("@/views/admin/AdminProduccionView.vue"),
+        meta: { title: "Producción Diaria · Courier Box" },
+      },
+      {
+        path: "reportes",
+        name: "AdminReportes",
+        component: () => import("@/views/admin/AdminReportesView.vue"),
+        meta: { title: "Reportes · Courier Box" },
+      },
+      {
         path: "envios",
         name: "AdminEnvios",
         component: () => import("@/views/admin/AdminEnviosView.vue"),
@@ -119,6 +143,37 @@ const routes: RouteRecordRaw[] = [
         name: "AdminMetrics",
         component: () => import("@/views/admin/MetricsView.vue"),
         meta: { title: "Métricas GHL · Courier Box" },
+      },
+    ],
+  },
+  {
+    path: "/superadmin",
+    component: () => import("@/views/admin/AdminLayout.vue"),
+    meta: { requiresAuth: true, requiresSuperadmin: true, hideNavigation: true },
+    children: [
+      {
+        path: "",
+        name: "SuperadminDashboard",
+        component: () => import("@/views/admin/SuperadminDashboardView.vue"),
+        meta: { title: "Superadmin · Courier Box" },
+      },
+      {
+        path: "reportes",
+        name: "SuperadminReportes",
+        component: () => import("@/views/admin/AdminReportesView.vue"),
+        meta: { title: "Estado de Resultados · Courier Box" },
+      },
+      {
+        path: "produccion",
+        name: "SuperadminProduccion",
+        component: () => import("@/views/admin/AdminProduccionView.vue"),
+        meta: { title: "Producción Diaria · Courier Box" },
+      },
+      {
+        path: "caja",
+        name: "SuperadminCaja",
+        component: () => import("@/views/admin/AdminCajaView.vue"),
+        meta: { title: "Caja · Courier Box" },
       },
     ],
   },
@@ -194,7 +249,7 @@ router.beforeEach((to, _from, next) => {
   const role = authStore.userRole;
 
   if (to.name === "AdminLogin" && isAuthenticated) {
-    next({ name: role === "asesor" ? "AsesorDashboard" : "AdminDashboard" });
+    next({ name: role === "asesor" ? "AsesorDashboard" : role === "superadmin" ? "SuperadminDashboard" : "AdminDashboard" });
     return;
   }
 
@@ -203,8 +258,13 @@ router.beforeEach((to, _from, next) => {
     return;
   }
 
-  if (to.meta.requiresAdmin && role !== "admin") {
-    next({ name: role === "asesor" ? "AsesorDashboard" : "Home" });
+  if (to.meta.requiresAdmin && !["admin", "gerencia", "superadmin"].includes(String(role || ""))) {
+    next({ name: role === "asesor" ? "AsesorDashboard" : role === "superadmin" ? "SuperadminDashboard" : "Home" });
+    return;
+  }
+
+  if ((to.meta as any).requiresSuperadmin && role !== "superadmin") {
+    next({ name: role === "admin" ? "AdminDashboard" : role === "asesor" ? "AsesorDashboard" : "Home" });
     return;
   }
 

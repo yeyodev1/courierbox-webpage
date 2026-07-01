@@ -8,6 +8,8 @@ import AppButton from '@/components/ui/AppButton.vue'
 
 const roleOptions = [
   { value: 'admin', label: 'Administrador' },
+  { value: 'gerencia', label: 'Gerencia' },
+  { value: 'superadmin', label: 'Superadmin' },
   { value: 'asesor', label: 'Asesor de compras' },
   { value: 'user', label: 'Usuario Regular' },
 ]
@@ -38,13 +40,15 @@ const deletingUser = ref(false)
 const stats = computed(() => {
   const total = users.value.length
   const admins = users.value.filter((u: any) => u.role === 'admin').length
+  const gerencia = users.value.filter((u: any) => u.role === 'gerencia').length
+  const superadmins = users.value.filter((u: any) => u.role === 'superadmin').length
   const asesores = users.value.filter((u: any) => u.role === 'asesor').length
   const regUsers = users.value.filter((u: any) => u.role === 'user').length
   const recent = users.value.filter((u: any) => {
     const d = new Date(u.createdAt)
     return d > new Date(Date.now() - 30 * 86400000)
   }).length
-  return { total, admins, asesores, regUsers, recent }
+  return { total, admins, gerencia, superadmins, asesores, regUsers, recent }
 })
 
 onMounted(() => fetchUsers())
@@ -181,6 +185,20 @@ async function executeDeleteUser() {
         </div>
       </div>
       <div class="stat-card">
+        <span class="stat-icon admin"><i class="fa-solid fa-briefcase" aria-hidden="true" /></span>
+        <div class="stat-body">
+          <span class="stat-value">{{ stats.gerencia }}</span>
+          <span class="stat-label">Gerencia</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon admin"><i class="fa-solid fa-user-shield" aria-hidden="true" /></span>
+        <div class="stat-body">
+          <span class="stat-value">{{ stats.superadmins }}</span>
+          <span class="stat-label">Superadmin</span>
+        </div>
+      </div>
+      <div class="stat-card">
         <span class="stat-icon asesor"><i class="fa-solid fa-handshake" aria-hidden="true" /></span>
         <div class="stat-body">
           <span class="stat-value">{{ stats.asesores }}</span>
@@ -234,8 +252,8 @@ async function executeDeleteUser() {
                 </div>
               </td>
               <td>
-                <span :class="['badge', u.role === 'admin' ? 'badge-info' : u.role === 'asesor' ? 'badge-orange' : 'badge-neutral']">
-                  {{ u.role === 'admin' ? 'Admin' : u.role === 'asesor' ? 'Asesor' : 'Usuario' }}
+                <span :class="['badge', u.role === 'admin' ? 'badge-info' : u.role === 'gerencia' ? 'badge-info' : u.role === 'superadmin' ? 'badge-info' : u.role === 'asesor' ? 'badge-orange' : 'badge-neutral']">
+                  {{ u.role === 'admin' ? 'Admin' : u.role === 'gerencia' ? 'Gerencia' : u.role === 'superadmin' ? 'Superadmin' : u.role === 'asesor' ? 'Asesor' : 'Usuario' }}
                 </span>
               </td>
               <td class="cell-sub">{{ new Date(u.createdAt).toLocaleDateString() }}</td>

@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
+import { useToastStore } from '@/stores/toast.store'
 
 const route = useRoute()
 
@@ -35,7 +36,7 @@ interface OrderData {
 
 const order = ref<OrderData | null>(null)
 const loading = ref(true)
-const error = ref('')
+const toastStore = useToastStore()
 
 const apiBaseUrl = (() => {
   const origin = window.location.origin
@@ -83,7 +84,7 @@ function formatAuditAction(action: string): string {
 onMounted(async () => {
   const token = String(route.params.token)
   if (!token) {
-    error.value = 'Enlace inválido'
+    toastStore.showNotification('Enlace inválido', 'error')
     loading.value = false
     return
   }
@@ -92,9 +93,9 @@ onMounted(async () => {
     order.value = res.data.order
   } catch (e: any) {
     if (e.response?.status === 410) {
-      error.value = 'Este enlace ya fue utilizado. Solicita un nuevo enlace a tu asesor.'
+      toastStore.showNotification('Este enlace ya fue utilizado. Solicita un nuevo enlace a tu asesor.', 'error')
     } else {
-      error.value = e.response?.data?.error || 'No se pudo cargar la información de la orden.'
+      toastStore.showNotification(e.response?.data?.error || 'No se pudo cargar la información de la orden.', 'error')
     }
   } finally {
     loading.value = false
@@ -107,15 +108,6 @@ onMounted(async () => {
     <div class="seguir-container">
       <div v-if="loading" class="loading">
         <i class="fa-solid fa-circle-notch fa-spin" /> Cargando...
-      </div>
-
-      <div v-else-if="error" class="seguir-card">
-        <div class="seguir-error">
-          <i class="fa-solid fa-circle-exclamation" />
-          <h2>Oops</h2>
-          <p>{{ error }}</p>
-          <router-link to="/" class="btn-home">Volver al inicio</router-link>
-        </div>
       </div>
 
       <template v-else-if="order">
@@ -185,6 +177,15 @@ onMounted(async () => {
           </div>
         </div>
       </template>
+
+      <div v-else class="seguir-card">
+        <div class="seguir-error">
+          <i class="fa-solid fa-circle-exclamation" />
+          <h2>No pudimos cargar la orden</h2>
+          <p>Revisa el enlace o solicita uno nuevo a tu asesor.</p>
+          <router-link to="/" class="btn-home">Volver al inicio</router-link>
+        </div>
+      </div>
     </div>
   </main>
 </template>

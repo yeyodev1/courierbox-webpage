@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { contactosApi, type Contacto, type ContactoDetail } from '@/services/contactos.api'
+import { useToastStore } from '@/stores/toast.store'
+
+const toastStore = useToastStore()
 
 const contactos = ref<Contacto[]>([])
 const total = ref(0)
 const loading = ref(false)
-const error = ref('')
 const searchQuery = ref('')
 const selectedContacto = ref<ContactoDetail | null>(null)
 const loadingDetail = ref(false)
@@ -37,13 +39,12 @@ function formatMoney(n: number): string {
 
 async function loadContactos() {
   loading.value = true
-  error.value = ''
   try {
     const data = await contactosApi.list({ q: searchQuery.value.trim() || undefined, limit: 200 })
     contactos.value = data.contactos
     total.value = data.total
   } catch (e: any) {
-    error.value = e.message || 'Error al cargar contactos'
+    toastStore.showNotification(e.message || 'Error al cargar contactos', 'error')
   } finally {
     loading.value = false
   }
@@ -56,7 +57,7 @@ async function openContacto(c: Contacto) {
     const data = await contactosApi.getDetail(c.clientName, c.clientEmail, c.clientPhone)
     selectedContacto.value = data
   } catch (e: any) {
-    error.value = e.message || 'Error al cargar detalle'
+    toastStore.showNotification(e.message || 'Error al cargar detalle', 'error')
   } finally {
     loadingDetail.value = false
   }
@@ -90,10 +91,6 @@ onMounted(loadContactos)
 
     <div v-if="loading" class="loading">
       <i class="fa-solid fa-circle-notch fa-spin" /> Cargando...
-    </div>
-
-    <div v-else-if="error" class="alert error">
-      <i class="fa-solid fa-circle-exclamation" /> {{ error }}
     </div>
 
     <div v-else-if="contactos.length === 0" class="empty">

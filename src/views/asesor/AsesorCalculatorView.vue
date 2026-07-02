@@ -3,8 +3,10 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { asesoriaApi } from '@/services/asesoria.api'
 import type { FeeCalculationResult, FeeConfig } from '@/services/asesoria.api'
+import { useToastStore } from '@/stores/toast.store'
 
 const router = useRouter()
+const toastStore = useToastStore()
 
 const productValue = ref<number | null>(null)
 const shippingValue = ref<number | null>(0)
@@ -12,10 +14,8 @@ const configId = ref<string>('')
 const configs = ref<FeeConfig[]>([])
 const result = ref<FeeCalculationResult | null>(null)
 const loading = ref(false)
-const error = ref('')
 
 const defaultConfig = computed(() => configs.value.find((c) => c.isDefault) || configs.value[0] || null)
-const hasConfig = computed(() => configs.value.length > 0)
 
 async function loadConfigs() {
   try {
@@ -24,17 +24,19 @@ async function loadConfigs() {
     if (defaultConfig.value) {
       configId.value = defaultConfig.value._id
     }
+    if (!data.configs.length) {
+      toastStore.showNotification('Aún no hay una tarifa configurada. Contacta al administrador para activar la calculadora.', 'warning')
+    }
   } catch (e) {
-    error.value = 'No se pudieron cargar las configuraciones de fee'
+    toastStore.showNotification('No se pudieron cargar las configuraciones de fee', 'error')
   }
 }
 
 async function calculate() {
   if (productValue.value == null || productValue.value < 0) {
-    error.value = 'Ingresa un valor de producto válido'
+    toastStore.showNotification('Ingresa un valor de producto válido', 'error')
     return
   }
-  error.value = ''
   loading.value = true
   try {
     const data = await asesoriaApi.calculateFee({
@@ -44,7 +46,7 @@ async function calculate() {
     })
     result.value = data.result
   } catch (e: any) {
-    error.value = e.data?.detail || e.message || 'Error al calcular el fee'
+    toastStore.showNotification(e.data?.detail || e.message || 'Error al calcular el fee', 'error')
   } finally {
     loading.value = false
   }
@@ -87,14 +89,6 @@ watch([productValue, shippingValue, configId], calculate, { deep: true })
       <section class="card inputs-card">
         <h3 class="card-title">Datos de la compra</h3>
 
-        <div v-if="!hasConfig" class="alert warning">
-          <i class="fa-solid fa-triangle-exclamation" />
-          <span>
-            Aún no hay una tarifa configurada. Contacta al administrador para que active la
-            calculadora.
-          </span>
-        </div>
-
         <label class="field">
           <span class="field-label">Tarifa aplicable</span>
           <select v-model="configId" class="field-input">
@@ -128,11 +122,6 @@ watch([productValue, shippingValue, configId], calculate, { deep: true })
             placeholder="Ej: 0.00"
           />
         </label>
-
-        <div v-if="error" class="alert error">
-          <i class="fa-solid fa-circle-exclamation" />
-          <span>{{ error }}</span>
-        </div>
 
         <button class="btn-primary" :disabled="loading || !result" @click="createOrder">
           <span v-if="loading">Calculando...</span>

@@ -8,7 +8,6 @@ const toastStore = useToastStore()
 const payments = ref<any[]>([])
 const loadingPayments = ref(false)
 const creatingPayment = ref(false)
-const errorPayment = ref('')
 const paymentForm = ref({ reference: '', customerName: '', customerEmail: '' })
 const displayAmount = ref<number | null>(null)
 const showDeletePaymentModal = ref(false)
@@ -20,7 +19,7 @@ async function fetchPayments() {
     const data = await adminApi.getPayments()
     payments.value = data.payments || []
   } catch (err: any) {
-    errorPayment.value = err.message || 'Error al cargar pagos'
+    toastStore.showNotification(err.message || 'Error al cargar pagos', 'error')
   } finally {
     loadingPayments.value = false
   }
@@ -34,7 +33,6 @@ function calculateTotals() {
 
 async function handleGenerateLink() {
   creatingPayment.value = true
-  errorPayment.value = ''
   try {
     await adminApi.generateLink({ ...calculateTotals(), ...paymentForm.value })
     paymentForm.value = { reference: '', customerName: '', customerEmail: '' }
@@ -42,7 +40,7 @@ async function handleGenerateLink() {
     await fetchPayments()
     toastStore.showNotification('Link de pago generado exitosamente', 'success')
   } catch (err: any) {
-    errorPayment.value = err.message || 'Error al generar el link'
+    toastStore.showNotification(err.message || 'Error al generar el link', 'error')
   } finally {
     creatingPayment.value = false
   }
@@ -109,7 +107,6 @@ onMounted(() => {
               <input type="email" v-model="paymentForm.customerEmail" placeholder="Opcional" />
             </div>
           </div>
-          <p v-if="errorPayment" class="form-error"><i class="fa-solid fa-circle-exclamation" /> {{ errorPayment }}</p>
           <button type="submit" :disabled="creatingPayment || !displayAmount || displayAmount <= 0" class="btn-primary">
             <span v-if="!creatingPayment">Crear Link · ${{ (displayAmount || 0).toFixed(2) }}</span>
             <span v-else class="loader" />

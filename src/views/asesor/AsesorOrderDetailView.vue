@@ -4,14 +4,15 @@ import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { asesoriaApi, type PurchaseOrder } from '@/services/asesoria.api'
 import AppFileUpload from '@/components/ui/AppFileUpload.vue'
+import { useToastStore } from '@/stores/toast.store'
 
 const route = useRoute()
 const router = useRouter()
+const toastStore = useToastStore()
 const orderId = computed(() => String(route.params.id))
 
 const order = ref<PurchaseOrder | null>(null)
 const loading = ref(false)
-const error = ref('')
 const generatingLink = ref(false)
 const uploading = ref(false)
 const transferFile = ref<File | null>(null)
@@ -99,12 +100,11 @@ function formatDate(ts: string): string {
 
 async function loadOrder() {
   loading.value = true
-  error.value = ''
   try {
     const data = await asesoriaApi.getOrder(orderId.value)
     order.value = data.order
   } catch (e: any) {
-    error.value = e.message || 'Error al cargar la orden'
+    toastStore.showNotification(e.message || 'Error al cargar la orden', 'error')
   } finally {
     loading.value = false
   }
@@ -116,7 +116,7 @@ async function generateLink() {
     await asesoriaApi.generatePaymentLink(orderId.value)
     await loadOrder()
   } catch (e: any) {
-    error.value = e.data?.detail || e.message || 'Error al generar link'
+    toastStore.showNotification(e.data?.detail || e.message || 'Error al generar link', 'error')
   } finally {
     generatingLink.value = false
   }
@@ -131,11 +131,10 @@ function copyLink() {
 
 async function submitTransfer() {
   if (!transferFile.value) {
-    error.value = 'Selecciona una imagen del comprobante'
+    toastStore.showNotification('Selecciona una imagen del comprobante', 'error')
     return
   }
   uploading.value = true
-  error.value = ''
   try {
     const formData = new FormData()
     formData.append('proof', transferFile.value)
@@ -147,7 +146,7 @@ async function submitTransfer() {
     transferNotes.value = ''
     await loadOrder()
   } catch (e: any) {
-    error.value = e.data?.detail || e.message || 'Error al subir comprobante'
+    toastStore.showNotification(e.data?.detail || e.message || 'Error al subir comprobante', 'error')
   } finally {
     uploading.value = false
   }
@@ -179,7 +178,7 @@ async function shareWith(asesorId: string) {
     shareSearchResults.value = []
     await loadOrder()
   } catch (e: any) {
-    error.value = e.message || 'Error al compartir'
+    toastStore.showNotification(e.message || 'Error al compartir', 'error')
   } finally {
     sharing.value = false
   }
@@ -190,7 +189,7 @@ async function unshare(asesorId: string) {
     await asesoriaApi.unshareOrder(orderId.value, asesorId)
     await loadOrder()
   } catch (e: any) {
-    error.value = e.message || 'Error al revocar'
+    toastStore.showNotification(e.message || 'Error al revocar', 'error')
   }
 }
 
@@ -210,11 +209,6 @@ onMounted(loadOrder)
     <div v-if="loading" class="loading">
       <i class="fa-solid fa-circle-notch fa-spin" />
       <span>Cargando orden...</span>
-    </div>
-
-    <div v-else-if="error" class="alert error">
-      <i class="fa-solid fa-circle-exclamation" />
-      <span>{{ error }}</span>
     </div>
 
     <template v-else-if="order">

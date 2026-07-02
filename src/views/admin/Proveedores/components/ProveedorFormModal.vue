@@ -2,6 +2,7 @@
 import { computed, watch, ref } from 'vue'
 import AppModal from '@/components/ui/AppModal.vue'
 import type { Proveedor } from '@/services/proveedores.api'
+import { useToastStore } from '@/stores/toast.store'
 
 interface FormState {
   nombre: string
@@ -47,6 +48,7 @@ const typeDraft = ref('')
 const typeError = ref('')
 const typeLoading = ref(false)
 const isEditMode = computed(() => !!props.initialData)
+const toastStore = useToastStore()
 
 const selectedTypeLabel = computed(() => form.value.tipo || 'Seleccionar tipo de proveedor')
 
@@ -118,7 +120,7 @@ async function addType() {
     typeDraft.value = ''
     showTypeModal.value = false
   } catch (error: any) {
-    typeError.value = error?.message || 'No se pudo guardar el tipo'
+    toastStore.showNotification(error?.message || 'No se pudo guardar el tipo', 'error')
   } finally {
     typeLoading.value = false
   }
@@ -135,7 +137,7 @@ function toggleProviderState() {
 
 function submit() {
   if (!form.value.nombre.trim()) {
-    typeError.value = 'El nombre es obligatorio'
+    toastStore.showNotification('El nombre es obligatorio', 'error')
     return
   }
   emit('save', { ...form.value })
@@ -161,10 +163,6 @@ function submit() {
         <span class="hero-chip"><i class="fa-solid fa-link" /> Conecta costos</span>
         <span class="hero-chip"><i class="fa-solid fa-tags" /> Clasificación flexible</span>
       </div>
-    </div>
-
-    <div v-if="typeError" class="alert error">
-      <i class="fa-solid fa-circle-exclamation" /> {{ typeError }}
     </div>
 
     <div class="form-shell">

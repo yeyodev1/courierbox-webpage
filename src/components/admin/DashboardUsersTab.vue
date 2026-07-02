@@ -10,7 +10,6 @@ const authStore = useAuthStore()
 const users = ref<any[]>([])
 const loadingUsers = ref(false)
 const creatingUser = ref(false)
-const errorUser = ref('')
 const userForm = ref({ name: '', email: '', password: '', role: 'admin' })
 const showEditUserModal = ref(false)
 const editingUserId = ref<string | null>(null)
@@ -26,7 +25,7 @@ async function fetchUsers() {
     const data = await adminApi.getUsers()
     users.value = data.users || []
   } catch (err: any) {
-    errorUser.value = err.message || 'Error al cargar usuarios'
+    toastStore.showNotification(err.message || 'Error al cargar usuarios', 'error')
   } finally {
     loadingUsers.value = false
   }
@@ -34,14 +33,13 @@ async function fetchUsers() {
 
 async function handleSaveUser() {
   creatingUser.value = true
-  errorUser.value = ''
   try {
     await adminApi.createUser({ ...userForm.value })
     toastStore.showNotification('Usuario creado exitosamente', 'success')
     userForm.value = { name: '', email: '', password: '', role: 'admin' }
     await fetchUsers()
   } catch (err: any) {
-    errorUser.value = err.message || 'Error al crear usuario'
+    toastStore.showNotification(err.message || 'Error al crear usuario', 'error')
   } finally {
     creatingUser.value = false
   }
@@ -129,7 +127,6 @@ onMounted(() => {
               <option value="user">Usuario Regular</option>
             </select>
           </div>
-          <p v-if="errorUser" class="form-error"><i class="fa-solid fa-circle-exclamation" /> {{ errorUser }}</p>
           <button type="submit" :disabled="creatingUser" class="btn-primary">
             <span v-if="!creatingUser">Crear Usuario</span>
             <span v-else class="loader" />

@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 import { proveedoresApi, type Proveedor } from '@/services/proveedores.api'
+import { useToastStore } from '@/stores/toast.store'
 
 import ProveedorCard from './Proveedores/components/ProveedorCard.vue'
 import ProveedorFormModal from './Proveedores/components/ProveedorFormModal.vue'
@@ -17,8 +18,8 @@ function normalizeType(value: string) {
 }
 
 const router = useRouter()
+const toastStore = useToastStore()
 const loading = ref(false)
-const error = ref('')
 const search = ref('')
 const proveedores = ref<Proveedor[]>([])
 const showModal = ref(false)
@@ -56,12 +57,11 @@ async function loadProviderTypes() {
 
 async function load() {
   loading.value = true
-  error.value = ''
   try {
     const data = await proveedoresApi.list({ q: search.value || undefined, limit: 200 })
     proveedores.value = data.proveedores
   } catch (e: any) {
-    error.value = e.message || 'Error al cargar proveedores'
+    toastStore.showNotification(e.message || 'Error al cargar proveedores', 'error')
   } finally {
     loading.value = false
   }
@@ -83,7 +83,7 @@ function goToCosts(p: Proveedor) {
 
 async function saveProveedor(payload: Partial<Proveedor>) {
   if (!payload.nombre?.trim()) {
-    error.value = 'El nombre es obligatorio'
+    toastStore.showNotification('El nombre es obligatorio', 'error')
     return
   }
 
@@ -97,7 +97,7 @@ async function saveProveedor(payload: Partial<Proveedor>) {
     selectedProveedor.value = null
     await load()
   } catch (e: any) {
-    error.value = e.message || 'No se pudo guardar'
+    toastStore.showNotification(e.message || 'No se pudo guardar', 'error')
   }
 }
 
@@ -111,7 +111,7 @@ async function toggleActivo(p: Proveedor) {
     await proveedoresApi.update(p._id, { activo: !p.activo })
     await load()
   } catch (e: any) {
-    error.value = e.message || 'No se pudo actualizar'
+    toastStore.showNotification(e.message || 'No se pudo actualizar', 'error')
   }
 }
 
@@ -119,7 +119,7 @@ function handleDeleteType(type: string) {
   const normalized = normalizeType(type)
   const count = typeUsage.value[normalized] || 0
   if (count > 0) {
-    error.value = `No puedes eliminar "${type}" porque ya está asignado a ${count} proveedor${count > 1 ? 'es' : ''}.`
+    toastStore.showNotification(`No puedes eliminar "${type}" porque ya está asignado a ${count} proveedor${count > 1 ? 'es' : ''}.`, 'error')
     return
   }
   pendingRemoval.value = {
@@ -155,7 +155,7 @@ async function confirmRemoval() {
     await proveedoresApi.remove(action.value)
     await load()
   } catch (e: any) {
-    error.value = e.message || 'No se pudo eliminar'
+    toastStore.showNotification(e.message || 'No se pudo eliminar', 'error')
   }
 }
 
@@ -163,7 +163,7 @@ watch(search, () => load())
 
 onMounted(() => {
   Promise.all([loadProviderTypes(), load()]).catch((e: any) => {
-    error.value = e.message || 'Error al cargar datos'
+    toastStore.showNotification(e.message || 'Error al cargar datos', 'error')
   })
 })
 </script>
@@ -194,7 +194,6 @@ onMounted(() => {
     <div v-if="loading" class="skeleton-list">
       <div v-for="n in 4" :key="n" class="skeleton-row"></div>
     </div>
-    <div v-else-if="error" class="alert error"><i class="fa-solid fa-circle-exclamation" /> {{ error }}</div>
     <div v-else-if="filtered.length === 0" class="empty">
       <i class="fa-solid fa-truck-fast" />
       <p>No hay proveedores</p>

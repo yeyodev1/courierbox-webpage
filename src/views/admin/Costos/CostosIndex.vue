@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { costosApi, CATEGORIAS_POR_TIPO, type Gasto } from '@/services/costos.api'
+import { useToastStore } from '@/stores/toast.store'
 
 import CostosHeader from './components/CostosHeader.vue'
 import CostosToolbar from './components/CostosToolbar.vue'
@@ -11,6 +12,7 @@ import CostosDetailModal from './components/CostosDetailModal.vue'
 import CostosFormModal from './components/CostosFormModal.vue'
 
 const route = useRoute()
+const toastStore = useToastStore()
 
 const gastos = ref<Gasto[]>([])
 const loading = ref(false)
@@ -74,7 +76,7 @@ async function load() {
     gastos.value = data.gastos
     resumen.value = resumenData.resumen
   } catch (e: any) {
-    error.value = e.message || 'Error'
+    toastStore.showNotification(e.message || 'Error', 'error')
   } finally {
     loading.value = false
   }
@@ -111,14 +113,17 @@ async function handleRemove(id: string) {
     await costosApi.remove(id)
     await load()
   } catch (e: any) {
-    error.value = e.message || 'Error al eliminar'
+    toastStore.showNotification(e.message || 'Error al eliminar', 'error')
   }
 }
 
 async function handleSave(payload: any, file: File | null) {
   try {
     if (selectedGasto.value) {
-      await costosApi.update(selectedGasto.value._id, payload)
+      const updated = await costosApi.update(selectedGasto.value._id, payload)
+      if (file && updated.gasto?._id) {
+        await costosApi.uploadFactura(updated.gasto._id, file)
+      }
     } else {
       const created = await costosApi.create(payload)
       if (file && created.gasto?._id) {
@@ -129,7 +134,7 @@ async function handleSave(payload: any, file: File | null) {
     selectedGasto.value = null
     await load()
   } catch (e: any) {
-    alert(e.message || 'Error al guardar')
+    toastStore.showNotification(e.message || 'Error al guardar', 'error')
   }
 }
 </script>

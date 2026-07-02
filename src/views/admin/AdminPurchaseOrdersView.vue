@@ -3,12 +3,13 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { asesoriaApi } from '@/services/asesoria.api'
 import type { PurchaseOrder } from '@/services/asesoria.api'
+import { useToastStore } from '@/stores/toast.store'
 
 const router = useRouter()
+const toastStore = useToastStore()
 
 const orders = ref<PurchaseOrder[]>([])
 const loading = ref(false)
-const error = ref('')
 const viewMode = ref<'board' | 'table'>('board')
 const activeTab = ref('pendientes')
 const statusFilter = ref('')
@@ -92,12 +93,11 @@ const boardColumns = computed(() => {
 
 async function loadOrders() {
   loading.value = true
-  error.value = ''
   try {
     const data = await asesoriaApi.listOrders({ limit: 200 })
     orders.value = data.orders
   } catch (e: any) {
-    error.value = e.message || 'Error al cargar órdenes'
+    toastStore.showNotification(e.message || 'Error al cargar órdenes', 'error')
   } finally {
     loading.value = false
   }
@@ -108,7 +108,7 @@ async function updateStatus(order: PurchaseOrder, status: string) {
     await asesoriaApi.updateOrderStatus(order._id, status)
     await loadOrders()
   } catch (e: any) {
-    error.value = e.message || 'Error al actualizar estado'
+    toastStore.showNotification(e.message || 'Error al actualizar estado', 'error')
   }
 }
 
@@ -117,7 +117,7 @@ async function updatePayment(order: PurchaseOrder, paymentStatus: string) {
     await asesoriaApi.updatePaymentStatus(order._id, paymentStatus)
     await loadOrders()
   } catch (e: any) {
-    error.value = e.message || 'Error al actualizar pago'
+    toastStore.showNotification(e.message || 'Error al actualizar pago', 'error')
   }
 }
 
@@ -157,7 +157,7 @@ async function confirmComprar() {
     comprarOrder.value = null
     await loadOrders()
   } catch (e: any) {
-    error.value = e.message || 'Error al comprar'
+    toastStore.showNotification(e.message || 'Error al comprar', 'error')
   }
 }
 
@@ -169,7 +169,7 @@ async function searchClients() {
     searchResults.value = data.orders
     showSearchModal.value = true
   } catch (e: any) {
-    error.value = e.message || 'Error al buscar'
+    toastStore.showNotification(e.message || 'Error al buscar', 'error')
   } finally {
     searchingClient.value = false
   }
@@ -182,7 +182,7 @@ async function resetViewToken(order: PurchaseOrder) {
     const idx = orders.value.findIndex((o) => o._id === order._id)
     if (idx !== -1) orders.value[idx] = data.order
   } catch (e: any) {
-    error.value = e.message || 'Error al generar enlace'
+    toastStore.showNotification(e.message || 'Error al generar enlace', 'error')
   } finally {
     savingToken.value = ''
   }
@@ -270,10 +270,6 @@ onMounted(loadOrders)
 
     <div v-if="loading" class="loading">
       <i class="fa-solid fa-circle-notch fa-spin" /> Cargando...
-    </div>
-
-    <div v-else-if="error" class="alert error">
-      <i class="fa-solid fa-circle-exclamation" /> {{ error }}
     </div>
 
     <div v-else-if="filteredOrders.length === 0" class="empty">

@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { enviosApi, type EnvioDomicilio, type PaqueteSimple } from '@/services/envios.api'
 import { proveedoresApi, type Proveedor } from '@/services/proveedores.api'
+import AppDatePicker from '@/components/ui/AppDatePicker.vue'
+import { useToastStore } from '@/stores/toast.store'
 
 // ── Tab state ──
 const activeTab = ref<'envios' | 'proveedores'>('envios')
 const pendingProvTipo = ref<'usa' | 'local' | null>(null)
+const toastStore = useToastStore()
 
 // ══════════════════════════════════════════
 // ENVÍOS
@@ -13,8 +16,10 @@ const pendingProvTipo = ref<'usa' | 'local' | null>(null)
 
 const envios = ref<EnvioDomicilio[]>([])
 const loading = ref(false)
-const error = ref('')
 const filtroEstado = ref('')
+const filtroDesde = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10))
+const filtroHasta = ref(new Date().toISOString().slice(0, 10))
+const resumen = ref<{ locales: { total: number; cobrados: number; costo?: number; novedades?: number }; interprovinciales: { total: number; cobrados: number; pagados: number; costo?: number; novedades?: number }; porEstado: Array<{ _id: string; total: number }>; saldo: number } | null>(null)
 
 const showModal = ref(false)
 const searchResults = ref<PaqueteSimple[]>([])
@@ -70,12 +75,15 @@ const filtered = computed(() => {
 
 async function load() {
   loading.value = true
-  error.value = ''
   try {
-    const data = await enviosApi.list({ estado: filtroEstado.value || undefined, limit: 200 })
+    const [data, sum] = await Promise.all([
+      enviosApi.list({ estado: filtroEstado.value || undefined, desde: filtroDesde.value || undefined, hasta: filtroHasta.value || undefined, limit: 200 }),
+      enviosApi.resumen({ desde: filtroDesde.value || undefined, hasta: filtroHasta.value || undefined }),
+    ])
     envios.value = data.envios
+    resumen.value = sum
   } catch (e: any) {
-    error.value = e.message || 'Error'
+    toastStore.showNotification(e.message || 'Error', 'error')
   } finally {
     loading.value = false
   }
@@ -183,7 +191,7 @@ async function create() {
     showModal.value = false
     await load()
   } catch (e: any) {
-    error.value = e.message || 'Error al crear'
+    toastStore.showNotification(e.message || 'Error al crear', 'error')
   }
 }
 
@@ -192,7 +200,7 @@ async function updateStatus(e: EnvioDomicilio, estado: string) {
     await enviosApi.update(e._id, { estado: estado as any })
     await load()
   } catch (e: any) {
-    error.value = e.message || 'Error'
+    toastStore.showNotification(e.message || 'Error', 'error')
   }
 }
 
@@ -202,11 +210,18 @@ async function togglePago(e: EnvioDomicilio, trayecto: 'trayectoUsa' | 'trayecto
     await enviosApi.marcarPago(e._id, trayecto, !leg.pagado)
     await load()
   } catch (e: any) {
-    error.value = e.message || 'Error'
+    toastStore.showNotification(e.message || 'Error', 'error')
   }
 }
 
 function formatMoney(n: number) { return `$${(n || 0).toFixed(2)}` }
+
+function openGuide(e: EnvioDomicilio) {
+  if (!e.guiaUrl || !e.clienteTelefono) return
+  const message = encodeURIComponent(`Hola ${e.clienteNombre}, te comparto la guía de tu envío: ${e.guiaUrl}`)
+  const phone = String(e.clienteTelefono).replace(/\D/g, '')
+  window.open(`https://wa.me/${phone}?text=${message}`, '_blank', 'noopener,noreferrer')
+}
 
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -218,7 +233,6 @@ function formatDate(d: string) {
 
 const proveedores = ref<Proveedor[]>([])
 const provLoading = ref(false)
-const provError = ref('')
 const provFilterQuery = ref('')
 const showProvModal = ref(false)
 const editingProv = ref<Proveedor | null>(null)
@@ -256,7 +270,7 @@ async function saveProvAndReturn() {
     }
     await loadProveedores()
   } catch (e: any) {
-    provError.value = e.message || 'Error'
+    toastStore.showNotification(e.message || 'Error', 'error')
   }
 }
 
@@ -275,12 +289,11 @@ const filteredProveedores = computed(() => {
 
 async function loadProveedores() {
   provLoading.value = true
-  provError.value = ''
   try {
     const data = await proveedoresApi.list({ q: provFilterQuery.value || undefined, limit: 200 })
     proveedores.value = data.proveedores
   } catch (e: any) {
-    provError.value = e.message || 'Error'
+    toastStore.showNotification(e.message || 'Error', 'error')
   } finally {
     provLoading.value = false
   }
@@ -305,7 +318,7 @@ async function toggleProvActivo(p: Proveedor) {
     await proveedoresApi.update(p._id, { activo: !p.activo })
     await loadProveedores()
   } catch (e: any) {
-    provError.value = e.message || 'Error'
+    toastStore.showNotification(e.message || 'Error', 'error')
   }
 }
 
@@ -313,6 +326,8 @@ onMounted(() => {
   load()
   loadProveedores()
 })
+
+watch([filtroEstado, filtroDesde, filtroHasta], load)
 </script>
 
 <template>
@@ -322,6 +337,13 @@ onMounted(() => {
         <h1 class="page-title">Envíos a Domicilio</h1>
         <p class="page-subtitle">Gestiona envíos de última milla y proveedores logísticos</p>
       </div>
+    </div>
+
+    <div v-if="resumen" class="stats-grid">
+      <article class="stat-card"><span>Locales</span><strong>{{ resumen.locales.total }}</strong><small>{{ formatMoney(resumen.locales.cobrados) }} cobrados</small></article>
+      <article class="stat-card"><span>Interprovinciales</span><strong>{{ resumen.interprovinciales.total }}</strong><small>{{ formatMoney(resumen.interprovinciales.cobrados) }} cobrados</small></article>
+      <article class="stat-card"><span>Saldo</span><strong>{{ formatMoney(resumen.saldo) }}</strong><small>cobrado menos costos</small></article>
+      <article class="stat-card"><span>Novedades</span><strong>{{ (resumen.locales.novedades || 0) + (resumen.interprovinciales.novedades || 0) }}</strong><small>casos con observación</small></article>
     </div>
 
     <div class="tabs">
@@ -339,14 +361,15 @@ onMounted(() => {
             <option v-for="(l, k) in estadoLabel" :key="k" :value="k">{{ l }}</option>
           </select>
         </label>
+        <AppDatePicker v-model="filtroDesde" label="Desde" />
+        <AppDatePicker v-model="filtroHasta" label="Hasta" />
         <button class="btn-primary" @click="openCreate"><i class="fa-solid fa-plus" /> Nuevo envío</button>
       </div>
 
       <div v-if="loading" class="skeleton-list">
         <div v-for="n in 4" :key="n" class="skeleton-row"></div>
       </div>
-      <div v-else-if="error" class="alert error"><i class="fa-solid fa-circle-exclamation" /> {{ error }}</div>
-      <div v-else-if="filtered.length === 0" class="empty"><i class="fa-solid fa-truck" /><p>No hay envíos</p></div>
+       <div v-else-if="filtered.length === 0" class="empty"><i class="fa-solid fa-truck" /><p>No hay envíos</p></div>
 
       <div v-else class="table-wrapper">
         <table class="envios-table">
@@ -401,7 +424,10 @@ onMounted(() => {
                 </button>
               </td>
               <td>
-                <a v-if="e.guiaUrl" :href="e.guiaUrl" target="_blank" class="file-link">Abrir</a>
+                <div v-if="e.guiaUrl" class="file-actions">
+                  <a :href="e.guiaUrl" target="_blank" class="file-link">Abrir</a>
+                  <button v-if="e.clienteTelefono" class="btn-link" type="button" @click="openGuide(e)">Enviar por WhatsApp</button>
+                </div>
                 <span v-else>—</span>
               </td>
               <td>
@@ -433,7 +459,6 @@ onMounted(() => {
       </div>
 
       <div v-if="provLoading" class="loading"><i class="fa-solid fa-circle-notch fa-spin" /> Cargando...</div>
-      <div v-else-if="provError" class="alert error"><i class="fa-solid fa-circle-exclamation" /> {{ provError }}</div>
       <div v-else-if="filteredProveedores.length === 0" class="empty"><i class="fa-solid fa-truck-field" /><p>No hay proveedores</p></div>
 
       <div v-else class="table-wrapper">
@@ -654,7 +679,35 @@ onMounted(() => {
   &.active { background: $brand-orange; color: #fff; }
 }
 
-.toolbar { display: flex; align-items: center; gap: $space-4; }
+.toolbar { display: flex; align-items: end; gap: $space-4; flex-wrap: wrap; }
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: $space-4;
+}
+
+.stat-card {
+  background: rgba($ink-900, 0.72);
+  border: 1px solid rgba($ink-500, 0.12);
+  border-radius: 20px;
+  padding: $space-4;
+
+  span {
+    color: $ink-400;
+    font-size: 0.8rem;
+  }
+
+  strong {
+    display: block;
+    margin: $space-2 0;
+    font-size: 1.8rem;
+  }
+
+  small {
+    color: $ink-500;
+  }
+}
 
 .client-search-wrapper { position: relative; }
 
@@ -731,6 +784,26 @@ onMounted(() => {
   color: $brand-orange;
   text-decoration: none;
   font-weight: 600;
+}
+
+.file-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.btn-link {
+  border: none;
+  background: transparent;
+  color: $ink-300;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    color: $brand-orange;
+  }
 }
 
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
@@ -838,6 +911,10 @@ onMounted(() => {
   padding: 0.75rem 1.5rem; background: transparent; border: 1px solid rgba($ink-500, 0.3); border-radius: 10px;
   color: $ink-300; font-weight: 500; cursor: pointer; font-size: 0.9rem; font-family: inherit;
   &:hover { background: rgba($ink-500, 0.15); color: $fg-dark; }
+}
+
+@media (max-width: 640px) {
+  .toolbar { align-items: stretch; }
 }
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.25s ease; }

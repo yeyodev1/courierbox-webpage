@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 import type { Gasto } from '@/services/costos.api'
+import { useToastStore } from '@/stores/toast.store'
 
 const props = defineProps({
   gastos: { type: Array as () => Gasto[], required: true },
@@ -13,6 +14,8 @@ const emit = defineEmits<{
   (e: 'detail', gasto: Gasto): void
   (e: 'delete', id: string): void
 }>()
+
+const toastStore = useToastStore()
 
 const showDeleteConfirm = ref(false)
 const deleteTargetId = ref('')
@@ -43,6 +46,10 @@ const tipoLabel: Record<string, string> = {
   logistico: 'Logístico',
   envio: 'Envío',
 }
+
+watch(() => props.error, (value) => {
+  if (value) toastStore.showNotification(value, 'error')
+})
 </script>
 
 <template>
@@ -50,7 +57,6 @@ const tipoLabel: Record<string, string> = {
     <div v-if="loading" class="skeleton-list">
       <div v-for="n in 4" :key="n" class="skeleton-row"></div>
     </div>
-    <div v-else-if="error" class="alert error"><i class="fa-solid fa-circle-exclamation" /> {{ error }}</div>
     <div v-else-if="gastos.length === 0" class="empty">
       <i class="fa-solid fa-coins" />
       <p>No hay gastos registrados</p>

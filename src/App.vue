@@ -68,7 +68,7 @@ onMounted(() => {
 /* Global Toast Notifications */
 .toast-notification {
   position: fixed;
-  bottom: 2rem;
+  top: 1.25rem;
   right: 2rem;
   z-index: 9999;
   display: flex;
@@ -104,6 +104,6 @@ onMounted(() => {
 .toast-fade-enter-from,
 .toast-fade-leave-to {
   opacity: 0;
-  transform: translateY(20px) scale(0.95);
+  transform: translateX(16px) scale(0.98);
 }
 </style>

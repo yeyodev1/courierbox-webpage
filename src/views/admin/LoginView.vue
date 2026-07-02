@@ -3,17 +3,17 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth.store';
 import { adminApi } from '@/services/admin.api';
+import { useToastStore } from '@/stores/toast.store';
 
 const email = ref('');
 const password = ref('');
-const error = ref('');
 const loading = ref(false);
 
 const router = useRouter();
 const authStore = useAuthStore();
+const toastStore = useToastStore();
 
 const handleLogin = async () => {
-  error.value = '';
   loading.value = true;
   try {
     const res = await adminApi.login(email.value, password.value);
@@ -23,7 +23,7 @@ const handleLogin = async () => {
     else if (role === 'superadmin') router.push({ name: 'SuperadminDashboard' });
     else router.push({ name: 'AdminDashboard' });
   } catch (err: any) {
-    error.value = err.message || 'Error al iniciar sesión';
+    toastStore.showNotification(err.message || 'Error al iniciar sesión', 'error');
   } finally {
     loading.value = false;
   }
@@ -70,12 +70,6 @@ const handleLogin = async () => {
               />
             </div>
           </div>
-
-          <transition name="fade">
-            <div v-if="error" class="error-message">
-              {{ error }}
-            </div>
-          </transition>
 
           <button type="submit" :disabled="loading" class="login-btn">
             <span v-if="!loading">Ingresar</span>

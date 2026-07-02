@@ -53,10 +53,12 @@ export interface PaqueteSimple {
 }
 
 class EnviosAPI extends APIBase {
-  async list(params?: { estado?: string; paqueteId?: string; limit?: number; offset?: number }) {
+  async list(params?: { estado?: string; paqueteId?: string; desde?: string; hasta?: string; limit?: number; offset?: number }) {
     const searchParams = new URLSearchParams()
     if (params?.estado) searchParams.set('estado', params.estado)
     if (params?.paqueteId) searchParams.set('paqueteId', params.paqueteId)
+    if (params?.desde) searchParams.set('desde', params.desde)
+    if (params?.hasta) searchParams.set('hasta', params.hasta)
     if (params?.limit) searchParams.set('limit', String(params.limit))
     if (params?.offset) searchParams.set('offset', String(params.offset))
     const res = await this.get<{ envios: EnvioDomicilio[]; total: number }>(`v1/envios?${searchParams.toString()}`)
@@ -109,8 +111,16 @@ class EnviosAPI extends APIBase {
     return res.data
   }
 
-  async buscarClientes(q: string): Promise<{ clientes: { clientName: string; clientEmail?: string; clientPhone?: string; lastOrderDate: string }[] }> {
-    const res = await this.get<{ clientes: { clientName: string; clientEmail?: string; clientPhone?: string; lastOrderDate: string }[] }>(`v1/envios/buscar-clientes?q=${encodeURIComponent(q)}`)
+  async buscarClientes(q: string): Promise<{ clientes: { clientId: string; clientName: string; clientEmail?: string; clientPhone?: string; lastOrderDate: string }[] }> {
+    const res = await this.get<{ clientes: { clientId: string; clientName: string; clientEmail?: string; clientPhone?: string; lastOrderDate: string }[] }>(`v1/envios/buscar-clientes?q=${encodeURIComponent(q)}`)
+    return res.data
+  }
+
+  async resumen(params?: { desde?: string; hasta?: string }) {
+    const searchParams = new URLSearchParams()
+    if (params?.desde) searchParams.set('desde', params.desde)
+    if (params?.hasta) searchParams.set('hasta', params.hasta)
+    const res = await this.get<{ locales: { total: number; cobrados: number; costo?: number; novedades?: number }, interprovinciales: { total: number; cobrados: number; pagados: number; costo?: number; novedades?: number }, porEstado: Array<{ _id: string; total: number }>, saldo: number }>(`v1/envios/resumen?${searchParams.toString()}`)
     return res.data
   }
 }

@@ -4,12 +4,12 @@ import { asesoriaApi } from '@/services/asesoria.api'
 import AppSelect from '@/components/ui/AppSelect.vue'
 import AppConfirmModal from '@/components/ui/AppConfirmModal.vue'
 import type { FeeConfig, FeeRuleType, FeeTier } from '@/services/asesoria.api'
+import { useToastStore } from '@/stores/toast.store'
 
 const configs = ref<FeeConfig[]>([])
 const loading = ref(false)
 const saving = ref(false)
-const error = ref('')
-const success = ref('')
+const toastStore = useToastStore()
 
 const showWizard = ref(false)
 const wizardStep = ref(1)
@@ -42,7 +42,7 @@ async function loadConfigs() {
     const data = await asesoriaApi.getFeeConfigs()
     configs.value = data.configs
   } catch (e: any) {
-    error.value = e.message || 'Error al cargar configuraciones'
+    toastStore.showNotification(e.message || 'Error al cargar configuraciones', 'error')
   } finally {
     loading.value = false
   }
@@ -60,7 +60,6 @@ function removeTier(idx: number) {
 
 async function finishWizard() {
   saving.value = true
-  error.value = ''
   try {
     await asesoriaApi.createFeeConfig({
       name: wizard.value.name,
@@ -76,11 +75,10 @@ async function finishWizard() {
     })
     showWizard.value = false
     wizardStep.value = 1
-    success.value = 'Tarifa creada correctamente'
+    toastStore.showNotification('Tarifa creada correctamente', 'success')
     await loadConfigs()
-    setTimeout(() => (success.value = ''), 3000)
   } catch (e: any) {
-    error.value = e.data?.detail || e.message || 'Error al guardar'
+    toastStore.showNotification(e.data?.detail || e.message || 'Error al guardar', 'error')
   } finally {
     saving.value = false
   }
@@ -91,7 +89,7 @@ async function setDefault(id: string) {
     await asesoriaApi.setDefaultFeeConfig(id)
     await loadConfigs()
   } catch (e: any) {
-    error.value = e.message || 'Error al cambiar tarifa por defecto'
+    toastStore.showNotification(e.message || 'Error al cambiar tarifa por defecto', 'error')
   }
 }
 
@@ -106,7 +104,7 @@ async function confirmDeleteConfig() {
     await asesoriaApi.deleteFeeConfig(deleteTargetId.value)
     await loadConfigs()
   } catch (e: any) {
-    error.value = e.message || 'Error al eliminar'
+    toastStore.showNotification(e.message || 'Error al eliminar', 'error')
   } finally {
     showDeleteConfirm.value = false
     deleteTargetId.value = ''
@@ -143,13 +141,6 @@ onMounted(loadConfigs)
       <button class="btn-primary" @click="showWizard = true">
         <i class="fa-solid fa-plus" /> Nueva tarifa
       </button>
-    </div>
-
-    <div v-if="success" class="alert success">
-      <i class="fa-solid fa-check-circle" /> {{ success }}
-    </div>
-    <div v-if="error" class="alert error">
-      <i class="fa-solid fa-circle-exclamation" /> {{ error }}
     </div>
 
     <div v-if="!hasConfig" class="onboarding-card">

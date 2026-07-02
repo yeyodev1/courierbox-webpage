@@ -1,5 +1,5 @@
 import { fileURLToPath, URL } from 'node:url';
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import vue from '@vitejs/plugin-vue';
 export default defineConfig({
     plugins: [vue()],
@@ -17,5 +17,9 @@ export default defineConfig({
             'courierboxlogistics.com',
             'testing-storybrand-frontend.bakano.ec',
         ],
+    },
+    test: {
+        environment: 'happy-dom',
+        include: ['src/**/*.spec.ts'],
     },
 });

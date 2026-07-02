@@ -4,9 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { asesoriaApi } from '@/services/asesoria.api'
 import AppSelect from '@/components/ui/AppSelect.vue'
 import type { FeeConfig, FeeCalculationResult } from '@/services/asesoria.api'
+import { useToastStore } from '@/stores/toast.store'
 
 const route = useRoute()
 const router = useRouter()
+const toastStore = useToastStore()
 
 const storeOptions = ['Amazon', 'eBay', 'Walmart', 'Target', 'Otra']
 
@@ -78,6 +80,11 @@ async function loadConfigs() {
     }
   } catch (e) {
     manualMode.value = true
+    toastStore.showNotification('No se pudieron cargar las configuraciones de fee', 'error')
+  }
+
+  if (!configs.value.length) {
+    toastStore.showNotification('Aún no hay una tarifa configurada. Se activó el modo manual.', 'warning')
   }
 }
 
@@ -92,7 +99,7 @@ async function calculate() {
     })
     feePreview.value = data.result
   } catch (e: any) {
-    error.value = e.data?.detail || e.message || 'Error al calcular el fee'
+    toastStore.showNotification(e.data?.detail || e.message || 'Error al calcular el fee', 'error')
   } finally {
     calculating.value = false
   }
@@ -111,13 +118,13 @@ function disableManualMode() {
 
 async function submit() {
   if (!form.value.clientName || !form.value.description || form.value.productValue <= 0) {
-    error.value = 'Completa los campos obligatorios: cliente, descripción y valor del producto'
+    toastStore.showNotification('Completa los campos obligatorios: cliente, descripción y valor del producto', 'error')
     return
   }
 
   if (manualMode.value) {
     if (typeof manualFeeAmount.value !== 'number' || typeof manualTotalAmount.value !== 'number') {
-      error.value = 'Ingresa el fee y el total manualmente'
+      toastStore.showNotification('Ingresa el fee y el total manualmente', 'error')
       return
     }
   }
@@ -137,7 +144,7 @@ async function submit() {
     const data = await asesoriaApi.createOrder(payload)
     router.push({ name: 'AsesorOrderDetail', params: { id: data.order._id } })
   } catch (e: any) {
-    error.value = e.data?.detail || e.message || 'Error al crear la orden'
+    toastStore.showNotification(e.data?.detail || e.message || 'Error al crear la orden', 'error')
     saving.value = false
   }
 }
@@ -268,11 +275,6 @@ onMounted(async () => {
         <section class="card">
           <h3 class="card-title"><i class="fa-solid fa-calculator" /> Cálculo del fee</h3>
 
-          <div v-if="!hasConfig" class="alert warning">
-            <i class="fa-solid fa-triangle-exclamation" />
-            <span>No hay tarifas configuradas. Activa el modo manual para ingresar el fee y el total.</span>
-          </div>
-
           <div class="field">
             <AppSelect
               v-model="configId"
@@ -328,11 +330,6 @@ onMounted(async () => {
           <div class="summary-row total">
             <span>Total a pagar</span>
             <strong>${{ preview?.totalAmount.toFixed(2) || '0.00' }}</strong>
-          </div>
-
-          <div v-if="error" class="alert error">
-            <i class="fa-solid fa-circle-exclamation" />
-            <span>{{ error }}</span>
           </div>
 
           <button class="btn-primary" :disabled="saving || calculating" @click="submit">

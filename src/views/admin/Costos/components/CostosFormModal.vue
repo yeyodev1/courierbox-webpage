@@ -6,6 +6,7 @@ import AppSelect from '@/components/ui/AppSelect.vue'
 import AppDatePicker from '@/components/ui/AppDatePicker.vue'
 import AppFileUpload from '@/components/ui/AppFileUpload.vue'
 import AppModal from '@/components/ui/AppModal.vue'
+import { useToastStore } from '@/stores/toast.store'
 
 const props = defineProps({
   show: { type: Boolean, required: true },
@@ -41,9 +42,8 @@ const incluyeCostoLibras = ref(false)
 
 const proveedores = ref<Proveedor[]>([])
 const savingProveedor = ref(false)
-const showProveedorHint = ref(false)
-const error = ref('')
 const showCloseConfirm = ref(false)
+const toastStore = useToastStore()
 
 const initialSnapshot = ref('')
 const currentSnapshot = computed(() => JSON.stringify(form.value))
@@ -106,10 +106,9 @@ async function crearProveedorDesdeCampo() {
   try {
     await proveedoresApi.create({ nombre, tipo: form.value.tipo || 'general' })
     await loadProveedores()
-    showProveedorHint.value = true
-    setTimeout(() => (showProveedorHint.value = false), 1800)
+    toastStore.showNotification('Proveedor guardado y disponible para futuros gastos.', 'success')
   } catch (e: any) {
-    error.value = e.message || 'No se pudo crear el proveedor'
+    toastStore.showNotification(e.message || 'No se pudo crear el proveedor', 'error')
   } finally {
     savingProveedor.value = false
   }
@@ -136,7 +135,6 @@ function resetForm() {
   facturaFile.value = null
   syncFacturaPreview(null)
   providerQuery.value = ''
-  error.value = ''
 }
 
 function isWeightExpense(gasto: Gasto) {
@@ -195,7 +193,7 @@ function handleSave() {
     ? form.value.categoriaPersonalizada
     : form.value.categoria
   if (!categoria || !form.value.descripcion || form.value.monto <= 0) {
-    error.value = 'Completa todos los campos requeridos'
+    toastStore.showNotification('Completa todos los campos requeridos', 'error')
     return
   }
   const pesoPayload = incluyeCostoLibras.value
@@ -238,10 +236,6 @@ function handleSave() {
     :prevent-close-on-overlay="hasUnsavedChanges"
     @close="requestCloseModal"
   >
-    <div v-if="error" class="alert error" style="margin-bottom: 1rem;">
-      <i class="fa-solid fa-circle-exclamation" /> {{ error }}
-    </div>
-
         <form id="costos-form" @submit.prevent="handleSave">
           <div class="form-grid">
             <div class="form-field">
@@ -287,7 +281,6 @@ function handleSave() {
               </button>
             </div>
             <input v-model="form.proveedor" class="field-input" placeholder="Nombre o empresa" @input="providerQuery = form.proveedor" />
-            <div v-if="showProveedorHint" class="provider-hint success">Proveedor guardado y disponible para futuros gastos.</div>
             <div v-if="proveedorSugeridos.length" class="provider-chips">
               <button v-for="p in proveedorSugeridos" :key="p._id" type="button" class="provider-chip" @click="form.proveedor = p.nombre">
                 {{ p.nombre }}

@@ -3,11 +3,12 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { asesoriaApi } from '@/services/asesoria.api'
 import type { PurchaseOrder } from '@/services/asesoria.api'
+import { useToastStore } from '@/stores/toast.store'
 
 const router = useRouter()
+const toastStore = useToastStore()
 const orders = ref<PurchaseOrder[]>([])
 const loading = ref(false)
-const error = ref('')
 const statusFilter = ref('')
 
 const statusOptions = [
@@ -44,12 +45,11 @@ const filteredOrders = computed(() => {
 
 async function loadOrders() {
   loading.value = true
-  error.value = ''
   try {
     const data = await asesoriaApi.listOrders({ limit: 100 })
     orders.value = data.orders
   } catch (e: any) {
-    error.value = e.message || 'Error al cargar órdenes'
+    toastStore.showNotification(e.message || 'Error al cargar órdenes', 'error')
   } finally {
     loading.value = false
   }
@@ -96,11 +96,6 @@ onMounted(loadOrders)
     <div v-if="loading" class="loading">
       <i class="fa-solid fa-circle-notch fa-spin" />
       <span>Cargando órdenes...</span>
-    </div>
-
-    <div v-else-if="error" class="alert error">
-      <i class="fa-solid fa-circle-exclamation" />
-      <span>{{ error }}</span>
     </div>
 
     <div v-else-if="filteredOrders.length === 0" class="empty">

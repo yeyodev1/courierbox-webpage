@@ -103,6 +103,11 @@ class AdminAPI extends APIBase {
     const res = await this.post<any>(endpoint, data);
     return res.data;
   }
+
+  async deleteData(endpoint: string) {
+    const res = await this.delete<any>(endpoint);
+    return res.data;
+  }
 }
 
 export const adminApi = new AdminAPI();

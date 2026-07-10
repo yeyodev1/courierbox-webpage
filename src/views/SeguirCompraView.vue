@@ -56,47 +56,23 @@
             <img :src="photo.url" :alt="photo.title ?? 'Foto relacionada'" />
             <span class="gallery-item__meta">
               <strong>{{ photo.title ?? (index === 0 ? 'Imagen principal' : `Foto ${index + 1}`) }}</strong>
-              <small>{{ formatDate(photo.createdAt) }}</small>
+              <small>{{ index === 0 ? 'Principal' : 'Relacionada' }}</small>
             </span>
           </button>
         </div>
       </section>
 
-      <section class="card detail-card">
+      <section class="card quick-card">
         <div class="card-head">
-          <h3><i class="fa-solid fa-circle-info" aria-hidden="true" /> Detalles</h3>
+          <h3><i class="fa-solid fa-circle-info" aria-hidden="true" /> Resumen rápido</h3>
         </div>
-        <div class="details-grid">
-          <div class="detail-item"><span class="detail-label">Cliente</span><span class="detail-value">{{ clienteNombre }}</span></div>
-          <div class="detail-item"><span class="detail-label">Valor total</span><span class="detail-value orange">${{ gestion.valorTotal.toFixed(2) }}</span></div>
-          <div class="detail-item">
-            <span class="detail-label">Reserva</span>
-            <span class="detail-value">
-              ${{ gestion.valorReserva.toFixed(2) }}
-              <span v-if="gestion.reservaConfirmada" class="badge-confirmed">Confirmada</span>
-            </span>
-          </div>
-          <div class="detail-item"><span class="detail-label">Página</span><span class="detail-value">{{ gestion.paginaCompra }}</span></div>
-          <div class="detail-item"><span class="detail-label">Entrega tentativa</span><span class="detail-value">{{ formatDate(gestion.fechaEntregaTentativa) }}</span></div>
-          <div class="detail-item" v-if="asesorNombre"><span class="detail-label">Asesor</span><span class="detail-value">{{ asesorNombre }}</span></div>
+        <div class="quick-grid">
+          <div class="quick-item"><span>Cliente</span><strong>{{ clienteNombre }}</strong></div>
+          <div class="quick-item"><span>Valor total</span><strong class="orange">${{ gestion.valorTotal.toFixed(2) }}</strong></div>
+          <div class="quick-item"><span>Reserva</span><strong>${{ gestion.valorReserva.toFixed(2) }}</strong></div>
+          <div class="quick-item"><span>Entrega</span><strong>{{ formatDate(gestion.fechaEntregaTentativa) }}</strong></div>
+          <div class="quick-item" v-if="asesorNombre"><span>Asesor</span><strong>{{ asesorNombre }}</strong></div>
         </div>
-      </section>
-
-      <section class="card tc-card">
-        <details>
-          <summary><i class="fa-solid fa-file-contract" aria-hidden="true" /> Ver Términos y Condiciones</summary>
-          <div class="tc-content">
-            <p>Al solicitar el servicio de gestión de compra con Courier Box Logistics, el cliente acepta que:</p>
-            <ol>
-              <li>Los tiempos de entrega son estimados y pueden variar por factores externos al courier (aduana, proveedor, logística internacional).</li>
-              <li>El valor de reserva no es reembolsable en caso de cancelación del pedido por parte del cliente.</li>
-              <li>Courier Box no se responsabiliza por demoras aduaneras ni restricciones de importación vigentes en Ecuador.</li>
-              <li>El cliente debe verificar que el producto no esté restringido para importación al Ecuador antes de confirmar la gestión.</li>
-              <li>Los precios incluyen el servicio de compra internacional; costos adicionales de aduana, impuestos o flete local serán informados oportunamente.</li>
-              <li>Toda comunicación sobre el estado de la compra se realizará a través del asesor asignado o el enlace de seguimiento.</li>
-            </ol>
-          </div>
-        </details>
       </section>
     </template>
 
@@ -254,7 +230,7 @@ onMounted(async () => {
 .stage-step strong { display: block; font-size: 0.92rem; }
 .stage-step p { margin: 2px 0 0; color: $ink-400; font-size: 0.8rem; }
 
-.gallery-card, .detail-card, .tc-card { padding: $space-5; }
+.gallery-card, .quick-card { padding: $space-5; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: $space-3; margin-bottom: $space-4; }
 .card-head h3 { display: flex; align-items: center; gap: $space-2; margin: 0; font-size: 1rem; }
 .card-head span { color: $ink-400; font-size: 0.82rem; }
@@ -269,25 +245,15 @@ onMounted(async () => {
 .gallery-item__meta strong { font-size: 0.84rem; }
 .gallery-item__meta small { color: $ink-400; }
 
-.details-grid { display: flex; flex-direction: column; }
-.detail-item {
-  display: grid; grid-template-columns: 150px 1fr; gap: $space-2; align-items: center;
-  padding: $space-2 0; border-bottom: 1px solid $ink-700;
+.quick-grid { display: flex; flex-wrap: wrap; gap: $space-3; }
+.quick-item {
+  flex: 1 1 160px; display: flex; flex-direction: column; gap: 4px;
+  padding: $space-4; border-radius: 14px; background: $ink-1000; border: 1px solid $ink-500;
 }
-.detail-item:last-child { border-bottom: none; }
-.detail-label { color: $ink-300; font-size: 0.82rem; }
-.detail-value { color: $fg-dark; font-size: 0.9rem; font-weight: 500; word-break: break-word; }
+.quick-item span { color: $ink-400; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.quick-item strong { color: $fg-dark; font-size: 0.92rem; word-break: break-word; }
 .orange { color: $brand-orange; font-weight: 700; }
 .badge-confirmed { color: $signal-green; font-size: 0.78rem; margin-left: $space-2; }
-
-.tc-card { padding-top: $space-4; padding-bottom: $space-4; }
-.tc-card summary { cursor: pointer; color: $ink-300; font-size: 0.85rem; }
-.tc-content {
-  margin-top: $space-3; color: $ink-400; font-size: 0.78rem; line-height: 1.7;
-  p { margin: 0 0 $space-2; }
-  ol { margin: 0; padding-left: $space-4; }
-  li { margin-bottom: $space-1; }
-}
 
 .footer {
   width: 100%; max-width: 1100px;
@@ -308,6 +274,5 @@ onMounted(async () => {
 @media (max-width: 900px) {
   .stage-hero { flex-direction: column; }
   .stage-hero__meta { align-items: flex-start; }
-  .detail-item { grid-template-columns: 1fr; gap: 4px; }
 }
 </style>

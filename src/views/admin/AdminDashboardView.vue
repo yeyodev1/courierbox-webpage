@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { adminApi } from '@/services/admin.api'
 import { costosApi } from '@/services/costos.api'
+import { gestionesCompraAPI } from '@/services/gestiones_compra.api'
 import {
   AdminDashboardActivityPanel,
   AdminDashboardFinancePanel,
@@ -23,6 +24,8 @@ interface ResumenData {
   totalPaquetesPendientes: number
   totalFacturas: number
   totalGastos: number
+  gestionesMes: number
+  gestionesValorMes: number
 }
 
 interface KpiCard {
@@ -56,6 +59,8 @@ const resumen = ref<ResumenData>({
   totalPaquetesPendientes: 0,
   totalFacturas: 0,
   totalGastos: 0,
+  gestionesMes: 0,
+  gestionesValorMes: 0,
 })
 
 function formatCurrency(value: number) {
@@ -70,8 +75,8 @@ const kpiCards = computed<KpiCard[]>(() => ([
   { label: 'Links de Pago', value: formatCompact(resumen.value.totalPayments), detail: `${resumen.value.recentPayments} esta semana`, icon: 'fa-link', tone: 'purple' },
   { label: 'Pendientes', value: formatCompact(resumen.value.pendingPayments), detail: 'Pagos en espera', icon: 'fa-clock', tone: 'orange' },
   { label: 'Usuarios', value: formatCompact(resumen.value.totalUsers), detail: 'Cuentas activas', icon: 'fa-users', tone: 'green' },
-  { label: 'Paquetes', value: formatCompact(resumen.value.totalPaquetesPendientes), detail: 'Pendientes ETL', icon: 'fa-box', tone: 'blue' },
-  { label: 'Facturas', value: formatCompact(resumen.value.totalFacturas), detail: 'Conciliación', icon: 'fa-file-invoice', tone: 'teal' },
+  { label: 'Gestiones del Mes', value: formatCurrency(resumen.value.gestionesValorMes), detail: `${resumen.value.gestionesMes} operaciones`, icon: 'fa-bag-shopping', tone: 'teal' },
+  { label: 'Facturas', value: formatCompact(resumen.value.totalFacturas), detail: 'Conciliación', icon: 'fa-file-invoice', tone: 'blue' },
   { label: 'Gastos', value: formatCurrency(resumen.value.totalGastos), detail: 'Costo acumulado', icon: 'fa-receipt', tone: 'red' },
 ]))
 
@@ -112,10 +117,18 @@ onMounted(async () => {
       totalPaquetesPendientes: 0,
       totalFacturas: 0,
       totalGastos: 0,
+      gestionesMes: 0,
+      gestionesValorMes: 0,
     }
     try { const etlData = await adminApi.getData('v1/etl/pendientes'); resumen.value.totalPaquetesPendientes = etlData.paquetes?.length || 0 } catch { /* empty */ }
     try { const concData = await adminApi.getData('v1/conciliacion/resumen'); resumen.value.totalFacturas = concData.resumen?.total || 0 } catch { /* empty */ }
     try { const costosData = await costosApi.resumen(); resumen.value.totalGastos = costosData.resumen?.total?.total || 0 } catch { /* empty */ }
+    try {
+      const now = new Date()
+      const gcStats = await gestionesCompraAPI.getStatsMensuales({ año: now.getFullYear(), mes: now.getMonth() + 1 })
+      resumen.value.gestionesMes = gcStats.totalGestiones
+      resumen.value.gestionesValorMes = gcStats.sumaValorTotal
+    } catch { /* empty */ }
   } catch { /* empty */ } finally {
     pageLoading.value = false
   }

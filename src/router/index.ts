@@ -144,6 +144,31 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/views/admin/MetricsView.vue"),
         meta: { title: "Métricas GHL · Courier Box" },
       },
+      // --- Gestiones de Compra ---
+      {
+        path: "gestiones-compra",
+        name: "AdminGestionesCompra",
+        component: () => import("@/views/admin/GestionesCompra/AdminGestionesCompraView.vue"),
+        meta: { title: "Gestiones de Compra · Courier Box" },
+      },
+      {
+        path: "gestiones-compra/nueva",
+        name: "AdminNuevaGestion",
+        component: () => import("@/views/admin/GestionesCompra/AdminNuevaGestionView.vue"),
+        meta: { title: "Nueva Gestión · Courier Box" },
+      },
+      {
+        path: "gestiones-compra/:id",
+        name: "AdminGestionDetail",
+        component: () => import("@/views/admin/GestionesCompra/AdminGestionCompraDetailView.vue"),
+        meta: { title: "Detalle Gestión · Courier Box" },
+      },
+      {
+        path: "cuentas-bancarias",
+        name: "AdminCuentasBancarias",
+        component: () => import("@/views/admin/AdminCuentasBancariasView.vue"),
+        meta: { title: "Cuentas Bancarias · Courier Box" },
+      },
     ],
   },
   {
@@ -212,6 +237,25 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/views/asesor/AsesorOrderDetailView.vue"),
         meta: { title: "Detalle de Orden · Courier Box" },
       },
+      // --- Gestiones de Compra (asesor) ---
+      {
+        path: "gestiones-compra",
+        name: "AsesorGestionesCompra",
+        component: () => import("@/views/asesor/AsesorGestionesCompraView.vue"),
+        meta: { title: "Mis Gestiones · Courier Box" },
+      },
+      {
+        path: "gestiones-compra/nueva",
+        name: "AsesorNuevaGestion",
+        component: () => import("@/views/asesor/AsesorNuevaGestionView.vue"),
+        meta: { title: "Nueva Gestión · Courier Box" },
+      },
+      {
+        path: "gestiones-compra/:id",
+        name: "AsesorGestionDetail",
+        component: () => import("@/views/asesor/AsesorGestionCompraDetailView.vue"),
+        meta: { title: "Detalle Gestión · Courier Box" },
+      },
     ],
   },
   {
@@ -225,6 +269,12 @@ const routes: RouteRecordRaw[] = [
     name: "SeguirPedido",
     component: () => import("@/views/SeguirPedidoView.vue"),
     meta: { title: "Seguir Pedido · Courier Box", hideNavigation: true },
+  },
+  {
+    path: "/compra/:token",
+    name: "SeguirCompra",
+    component: () => import("@/views/SeguirCompraView.vue"),
+    meta: { title: "Mi Compra · Courier Box", hideNavigation: true },
   },
   {
     path: "/:pathMatch(.*)*",

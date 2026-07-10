@@ -20,6 +20,12 @@ const menuGroups = [
       { path: '/asesor/ordenes', label: 'Ventas', icon: 'fa-solid fa-bag-shopping', match: (p: string) => p.startsWith('/asesor/ordenes') },
     ],
   },
+  {
+    label: 'Gestión de Compra',
+    items: [
+      { path: '/asesor/gestiones-compra', label: 'Mis Gestiones', icon: 'fa-solid fa-cart-plus', match: (p: string) => p.startsWith('/asesor/gestiones-compra') },
+    ],
+  },
 ]
 
 const currentPath = computed(() => route.path)
@@ -37,6 +43,8 @@ const pageMeta = computed(() => {
     '/asesor/calculadora': { title: 'Calculadora de gestión', sub: 'Cotiza el fee de gestión de compra' },
     '/asesor/ordenes': { title: 'Ventas', sub: 'Gestiona las órdenes de compra de tus clientes' },
     '/asesor/ordenes/nueva': { title: 'Nueva orden', sub: 'Crea una orden de compra para tu cliente' },
+    '/asesor/gestiones-compra': { title: 'Mis Gestiones de Compra', sub: 'Administra tus gestiones del mes' },
+    '/asesor/gestiones-compra/nueva': { title: 'Nueva Gestión', sub: 'Registra una nueva gestión de compra' },
   }
   return map[route.path] || { title: 'Asesor', sub: '' }
 })

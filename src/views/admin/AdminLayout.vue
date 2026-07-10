@@ -68,6 +68,13 @@ const menuGroups = computed(() => {
       ],
     },
     {
+      label: 'Gestión de Compra',
+      items: [
+        { path: p('/gestiones-compra'), label: 'Gestiones de Compra', icon: 'fa-solid fa-bag-shopping', match: (routePath: string) => routePath.startsWith(`${basePath.value}/gestiones-compra`) },
+        { path: p('/cuentas-bancarias'), label: 'Cuentas Bancarias', icon: 'fa-solid fa-building-columns', match: (routePath: string) => routePath.startsWith(`${basePath.value}/cuentas-bancarias`) },
+      ],
+    },
+    {
       label: 'Asesores',
       items: [
         { path: p('/fee-config'), label: 'Tarifas', icon: 'fa-solid fa-calculator', match: (routePath: string) => routePath.startsWith(`${basePath.value}/fee-config`) },
@@ -104,6 +111,8 @@ const pageMeta = computed(() => {
     '/admin/contactos': { title: 'Contactos', sub: 'Busca clientes, revisa órdenes e historial de gestión' },
     '/admin/conciliacion': { title: 'Conciliación Bancaria', sub: 'Cruza pagos con transacciones bancarias' },
     '/admin/metrics': { title: 'Métricas GHL', sub: 'Métricas de GoHighLevel' },
+    '/admin/gestiones-compra': { title: 'Gestiones de Compra', sub: 'Administra las gestiones de compra del equipo' },
+    '/admin/cuentas-bancarias': { title: 'Cuentas Bancarias', sub: 'Configura las cuentas de cobro de reservas' },
     '/superadmin/reportes': { title: 'Estado de Resultados', sub: 'Visión ejecutiva privada' },
     '/superadmin/produccion': { title: 'Producción Diaria', sub: 'Control privado de producción' },
     '/superadmin/caja': { title: 'Caja', sub: 'Seguimiento financiero privado' },

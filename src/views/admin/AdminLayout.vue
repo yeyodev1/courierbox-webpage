@@ -68,6 +68,13 @@ const menuGroups = computed(() => {
       ],
     },
     {
+      label: 'Gestión de Compra',
+      items: [
+        { path: p('/gestiones-compra'), label: 'Gestiones de Compra', icon: 'fa-solid fa-bag-shopping', match: (routePath: string) => routePath.startsWith(`${basePath.value}/gestiones-compra`) },
+        { path: p('/cuentas-bancarias'), label: 'Cuentas Bancarias', icon: 'fa-solid fa-building-columns', match: (routePath: string) => routePath.startsWith(`${basePath.value}/cuentas-bancarias`) },
+      ],
+    },
+    {
       label: 'Asesores',
       items: [
         { path: p('/fee-config'), label: 'Tarifas', icon: 'fa-solid fa-calculator', match: (routePath: string) => routePath.startsWith(`${basePath.value}/fee-config`) },
@@ -104,6 +111,8 @@ const pageMeta = computed(() => {
     '/admin/contactos': { title: 'Contactos', sub: 'Busca clientes, revisa órdenes e historial de gestión' },
     '/admin/conciliacion': { title: 'Conciliación Bancaria', sub: 'Cruza pagos con transacciones bancarias' },
     '/admin/metrics': { title: 'Métricas GHL', sub: 'Métricas de GoHighLevel' },
+    '/admin/gestiones-compra': { title: 'Gestiones de Compra', sub: 'Administra las gestiones de compra del equipo' },
+    '/admin/cuentas-bancarias': { title: 'Cuentas Bancarias', sub: 'Configura las cuentas de cobro de reservas' },
     '/superadmin/reportes': { title: 'Estado de Resultados', sub: 'Visión ejecutiva privada' },
     '/superadmin/produccion': { title: 'Producción Diaria', sub: 'Control privado de producción' },
     '/superadmin/caja': { title: 'Caja', sub: 'Seguimiento financiero privado' },
@@ -360,22 +369,24 @@ function handleLogoutKeydown(e: KeyboardEvent) {
     right: -12px;
     top: 50%;
     transform: translateY(-50%);
-    width: 24px;
-    height: 24px;
-    background: $ink-700;
-    border: 1px solid $ink-500;
-    color: $ink-300;
+    z-index: 40;
+    width: 30px;
+    height: 30px;
+    background: linear-gradient(180deg, $brand-orange, darken($brand-orange, 12%));
+    border: 1px solid rgba($brand-orange, 0.6);
+    color: $ink-1000;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 0.6rem;
-    transition: all 0.2s;
+    font-size: 0.7rem;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45), 0 0 0 2px rgba(240, 138, 31, 0.12);
+    transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
 
     &:hover {
-      background: $ink-600;
-      color: $fg-dark;
+      transform: translateY(-50%) scale(1.05);
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(240, 138, 31, 0.22);
     }
 
     &:focus-visible {

@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { asesoriaApi } from '@/services/asesoria.api'
 import type { PurchaseOrder } from '@/services/asesoria.api'
+import { gestionesCompraAPI } from '@/services/gestiones_compra.api'
 
 const router = useRouter()
 
@@ -13,6 +14,7 @@ const stats = ref({
   recentOrders: [] as PurchaseOrder[],
 })
 const loading = ref(false)
+const gcStats = ref({ totalGestiones: 0, sumaValorTotal: 0, sumaComision: 0 })
 
 const actions = [
   {
@@ -32,6 +34,24 @@ const actions = [
     sub: 'Ver historial',
     icon: 'fa-solid fa-bag-shopping',
     route: '/asesor/ordenes',
+  },
+  {
+    label: 'Nueva Venta',
+    sub: 'Registrar venta de compra',
+    icon: 'fa-solid fa-cart-plus',
+    route: '/asesor/ventas',
+  },
+  {
+    label: 'Contactos',
+    sub: 'Ver historial y clientes',
+    icon: 'fa-solid fa-address-book',
+    route: '/asesor/contactos',
+  },
+  {
+    label: 'Mis Gestiones',
+    sub: 'Ver gestiones del mes',
+    icon: 'fa-solid fa-list-check',
+    route: '/asesor/gestiones-compra',
   },
 ]
 
@@ -65,7 +85,13 @@ function formatMoney(amount: number) {
   return `$${Number(amount).toFixed(2)}`
 }
 
-onMounted(loadStats)
+onMounted(() => {
+  loadStats()
+  const now = new Date()
+  gestionesCompraAPI.getStatsMensuales({ año: now.getFullYear(), mes: now.getMonth() + 1 })
+    .then(data => { gcStats.value = data })
+    .catch(() => {})
+})
 </script>
 
 <template>
@@ -99,6 +125,14 @@ onMounted(loadStats)
         <div class="stat-info">
           <span class="stat-value">{{ formatMoney(stats.totalSold) }}</span>
           <span class="stat-label">Vendido confirmado</span>
+        </div>
+      </div>
+      <div class="stat-card stat-card--highlight" @click="router.push('/asesor/gestiones-compra')" style="cursor:pointer">
+        <div class="stat-icon stat-icon--orange"><i class="fa-solid fa-cart-plus" /></div>
+        <div class="stat-info">
+          <span class="stat-value">{{ formatMoney(gcStats.sumaValorTotal) }}</span>
+          <span class="stat-label">Gestiones del mes</span>
+          <span class="stat-sub">{{ gcStats.totalGestiones }} operaciones</span>
         </div>
       </div>
     </div>
@@ -238,6 +272,23 @@ onMounted(loadStats)
     font-size: 0.85rem;
     color: $ink-400;
   }
+
+  .stat-sub {
+    font-size: 0.75rem;
+    color: $ink-400;
+  }
+}
+
+.stat-card--highlight {
+  border-color: rgba($brand-orange, 0.35);
+  background: rgba($brand-orange, 0.05);
+
+  .stat-value { color: $brand-orange; }
+}
+
+.stat-icon--orange {
+  background: rgba($brand-orange, 0.15) !important;
+  color: $brand-orange !important;
 }
 
 .section-title {

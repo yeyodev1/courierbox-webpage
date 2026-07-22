@@ -27,6 +27,7 @@ export interface EnvioDomicilio {
     trackingOriginal: string
     contenido: string
   } | null
+  gestionCompraId?: string | null
   clienteNombre: string
   clienteDireccion: string
   clienteTelefono: string
@@ -86,6 +87,7 @@ class EnviosAPI extends APIBase {
 
   async create(data: {
     paqueteId?: string
+    gestionCompraId?: string
     modo?: 'local' | 'interprovincial'
     clienteNombre: string
     clienteDireccion: string

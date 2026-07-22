@@ -16,6 +16,23 @@
       <article class="s-card"><span>Pendientes de asignar</span><strong>{{ sinAsignar }}</strong></article>
     </section>
 
+    <!-- Por asignar: compras recibidas en bodega sin envío -->
+    <section v-if="porAsignar.length" class="por-asignar">
+      <div class="pa-head">
+        <h2><i class="fa-solid fa-box-open" aria-hidden="true" /> Por asignar <span class="pa-count">{{ porAsignar.length }}</span></h2>
+        <p>Compras recibidas en bodega, listas para generar el envío y asignar un motorizado.</p>
+      </div>
+      <div class="pa-list">
+        <article v-for="g in porAsignar" :key="g._id" class="pa-card">
+          <div class="pa-info">
+            <strong>{{ gClienteNombre(g) }}</strong>
+            <span>{{ g.paginaCompra || 'Compra' }} · ${{ money(g.valorTotal) }}</span>
+          </div>
+          <button class="btn primary sm" @click="generarDesdeCompra(g)"><i class="fa-solid fa-truck-fast" /> Generar envío</button>
+        </article>
+      </div>
+    </section>
+
     <!-- Filters -->
     <div class="tabs">
       <button v-for="t in tabsList" :key="t.key" :class="{ active: tab === t.key }" @click="tab = t.key">{{ t.label }}</button>
@@ -66,6 +83,9 @@
           </div>
 
           <div class="form">
+            <div v-if="linkedGestionId" class="linked-banner">
+              <i class="fa-solid fa-link" aria-hidden="true" /> Envío generado desde una compra recibida en bodega. Completa la dirección y asigna el motorizado.
+            </div>
             <div class="modo-cards">
               <button class="modo-card" :class="{ selected: form.modo === 'local' }" @click="form.modo = 'local'">
                 <i class="fa-solid fa-motorcycle" /> <span>Local (motorizado)</span>
@@ -132,6 +152,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { enviosApi, type EnvioDomicilio, type Motorizado } from '@/services/envios.api'
 import { proveedoresApi, type Proveedor } from '@/services/proveedores.api'
+import { gestionesCompraAPI, type GestionCompra } from '@/services/gestiones_compra.api'
 import { useToastStore } from '@/stores/toast.store'
 
 const toast = useToastStore()
@@ -140,6 +161,8 @@ const saving = ref(false)
 const envios = ref<EnvioDomicilio[]>([])
 const motorizados = ref<Motorizado[]>([])
 const proveedores = ref<Proveedor[]>([])
+const gestiones = ref<GestionCompra[]>([])
+const linkedGestionId = ref<string>('')
 const tab = ref<'todos' | 'pendientes' | 'entregados'>('todos')
 const showCreate = ref(false)
 const error = ref('')
@@ -172,12 +195,42 @@ const filtered = computed(() => {
   if (tab.value === 'entregados') return envios.value.filter((e) => e.estado === 'entregado')
   return envios.value
 })
+// Purchases received in bodega (stage 'comprada') that don't have a delivery yet.
+const linkedGestionIds = computed(() => new Set(envios.value.map((e) => (e.gestionCompraId ? String(e.gestionCompraId) : '')).filter(Boolean)))
+const porAsignar = computed(() =>
+  gestiones.value.filter((g) => g.stage === 'comprada' && !linkedGestionIds.value.has(String(g._id)))
+)
+function gClienteNombre(g: GestionCompra) { return typeof g.contactoId === 'object' && g.contactoId ? g.contactoId.nombre : 'Cliente' }
+
 const porCobrar = computed(() => envios.value.filter((e) => e.estado !== 'entregado').reduce((s, e) => s + (Number(e.valorCobrado) || 0), 0))
 const cobrado = computed(() => envios.value.filter((e) => e.estado === 'entregado').reduce((s, e) => s + (Number(e.valorCobrado) || 0), 0))
 const sinAsignar = computed(() => envios.value.filter((e) => e.modo === 'local' && !asignadoId(e) && e.estado !== 'entregado').length)
 
 function openCreate() {
+  linkedGestionId.value = ''
   form.value = { modo: 'local', clienteNombre: '', clienteTelefono: '', clienteEmail: '', clienteDireccion: '', valorCobrado: '', asignadoA: '', proveedorNombre: '', costoProveedor: '', notas: '' }
+  guiaFile.value = null
+  guiaFileName.value = ''
+  error.value = ''
+  showCreate.value = true
+}
+
+// Generate a delivery from a received purchase (prefill client data).
+function generarDesdeCompra(g: GestionCompra) {
+  linkedGestionId.value = String(g._id)
+  const c = typeof g.contactoId === 'object' && g.contactoId ? g.contactoId : null
+  form.value = {
+    modo: 'local',
+    clienteNombre: c?.nombre ?? '',
+    clienteTelefono: (c as any)?.telefono ?? '',
+    clienteEmail: (c as any)?.email ?? '',
+    clienteDireccion: '',
+    valorCobrado: '',
+    asignadoA: '',
+    proveedorNombre: '',
+    costoProveedor: '',
+    notas: `Compra: ${g.paginaCompra || ''}`.trim(),
+  }
   guiaFile.value = null
   guiaFileName.value = ''
   error.value = ''
@@ -193,9 +246,14 @@ function onGuia(e: Event) {
 async function load() {
   loading.value = true
   try {
-    const [enviosRes, motosRes] = await Promise.all([enviosApi.list({ limit: 200 }), enviosApi.listMotorizados()])
+    const [enviosRes, motosRes, gestRes] = await Promise.all([
+      enviosApi.list({ limit: 200 }),
+      enviosApi.listMotorizados(),
+      gestionesCompraAPI.list({ limit: 100 }),
+    ])
     envios.value = enviosRes.envios
     motorizados.value = motosRes.motorizados
+    gestiones.value = gestRes.gestiones
   } finally {
     loading.value = false
   }
@@ -215,6 +273,7 @@ async function create() {
   try {
     const created = await enviosApi.create({
       modo: form.value.modo,
+      gestionCompraId: linkedGestionId.value || undefined,
       clienteNombre: form.value.clienteNombre.trim(),
       clienteTelefono: form.value.clienteTelefono.trim(),
       clienteEmail: form.value.clienteEmail.trim(),
@@ -271,6 +330,16 @@ onMounted(load)
 .s-card.accent { border-color: rgba($brand-orange, 0.3); }
 .s-card.accent strong { color: $brand-orange; }
 
+.por-asignar { background: rgba($brand-orange, 0.06); border: 1px solid rgba($brand-orange, 0.22); border-radius: 16px; padding: $space-4 $space-5; display: flex; flex-direction: column; gap: $space-3; }
+.pa-head h2 { display: flex; align-items: center; gap: $space-2; margin: 0 0 4px; color: $fg-dark; font-size: 1.1rem; i { color: $brand-orange; } }
+.pa-count { background: $brand-orange; color: $ink-1000; border-radius: 999px; font-size: 0.72rem; padding: 2px 9px; font-weight: 800; }
+.pa-head p { margin: 0; color: $ink-300; font-size: 0.86rem; }
+.pa-list { display: flex; flex-direction: column; gap: $space-2; }
+.pa-card { display: flex; align-items: center; justify-content: space-between; gap: $space-3; background: $ink-900; border: 1px solid $ink-700; border-radius: 12px; padding: $space-3 $space-4; }
+.pa-info { display: flex; flex-direction: column; gap: 2px; }
+.pa-info strong { color: $fg-dark; }
+.pa-info span { color: $ink-400; font-size: 0.82rem; }
+.linked-banner { display: flex; align-items: flex-start; gap: $space-2; background: rgba($signal-blue, 0.1); border: 1px solid rgba($signal-blue, 0.3); border-radius: 10px; padding: $space-3 $space-4; color: $ink-300; font-size: 0.85rem; line-height: 1.4; i { color: $signal-blue; margin-top: 2px; } }
 .tabs { display: flex; gap: $space-2; flex-wrap: wrap; }
 .tabs button { padding: $space-2 $space-4; border-radius: 10px; background: $ink-900; border: 1px solid $ink-700; color: $ink-300; cursor: pointer; font-weight: 700; &.active { border-color: $brand-orange; color: $brand-orange; background: rgba($brand-orange, 0.08); } }
 

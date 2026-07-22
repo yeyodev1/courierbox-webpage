@@ -11,6 +11,8 @@ const roleOptions = [
   { value: 'gerencia', label: 'Gerencia' },
   { value: 'superadmin', label: 'Superadmin' },
   { value: 'asesor', label: 'Asesor de compras' },
+  { value: 'motorizado', label: 'Motorizado (delivery)' },
+  { value: 'bodega', label: 'Bodega' },
   { value: 'user', label: 'Usuario Regular' },
 ]
 
@@ -265,8 +267,8 @@ async function executeDeleteUser() {
                 </div>
               </td>
               <td>
-                <span :class="['badge', u.role === 'admin' ? 'badge-info' : u.role === 'gerencia' ? 'badge-info' : u.role === 'superadmin' ? 'badge-info' : u.role === 'asesor' ? 'badge-orange' : 'badge-neutral']">
-                  {{ u.role === 'admin' ? 'Admin' : u.role === 'gerencia' ? 'Gerencia' : u.role === 'superadmin' ? 'Superadmin' : u.role === 'asesor' ? 'Asesor' : 'Usuario' }}
+                <span :class="['badge', ['admin','gerencia','superadmin'].includes(u.role) ? 'badge-info' : ['asesor','motorizado','bodega'].includes(u.role) ? 'badge-orange' : 'badge-neutral']">
+                  {{ u.role === 'admin' ? 'Admin' : u.role === 'gerencia' ? 'Gerencia' : u.role === 'superadmin' ? 'Superadmin' : u.role === 'asesor' ? 'Asesor' : u.role === 'motorizado' ? 'Motorizado' : u.role === 'bodega' ? 'Bodega' : 'Usuario' }}
                 </span>
               </td>
               <td class="cell-sub">{{ new Date(u.createdAt).toLocaleDateString() }}</td>

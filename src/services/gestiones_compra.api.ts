@@ -175,7 +175,7 @@ class GestionesCompraAPI extends APIBase {
 
   async recepcionBodega(
     id: string,
-    data: { fotos: { url: string; title?: string }[]; notas?: string; enviarCorreo?: boolean }
+    data: { fotos: { url: string; title?: string }[]; notas?: string; enviarCorreo?: boolean; entregaEstimada?: string }
   ): Promise<GestionCompra> {
     const res = await this.post<{ gestion: GestionCompra }>(`${this.base}/${id}/recepcion-bodega`, data)
     return res.data.gestion

@@ -24,7 +24,7 @@ const loadingUsers = ref(false)
 const apiError = ref('')
 
 const showCreateModal = ref(false)
-const createForm = ref({ name: '', email: '', password: '', role: 'asesor' })
+const createForm = ref({ nombre: '', apellido: '', email: '', password: '', role: 'asesor' })
 const sendEmail = ref(true)
 const creatingUser = ref(false)
 const createError = ref('')
@@ -79,7 +79,7 @@ function generatePassword(): string {
 }
 
 function openCreateModal() {
-  createForm.value = { name: '', email: '', password: generatePassword(), role: 'asesor' }
+  createForm.value = { nombre: '', apellido: '', email: '', password: generatePassword(), role: 'asesor' }
   sendEmail.value = true
   createError.value = ''
   showCreateModal.value = true
@@ -104,7 +104,13 @@ async function handleCreateUser() {
   creatingUser.value = true
   createError.value = ''
   try {
-    const payload: any = { name: createForm.value.name, email: createForm.value.email, role: createForm.value.role }
+    const fullName = `${createForm.value.nombre.trim()} ${createForm.value.apellido.trim()}`.trim()
+    if (!fullName) {
+      createError.value = 'Ingresa al menos el nombre'
+      creatingUser.value = false
+      return
+    }
+    const payload: any = { name: fullName, email: createForm.value.email, role: createForm.value.role }
     payload.password = createForm.value.password || generatePassword()
     payload.sendEmail = sendEmail.value
     payload.loginUrl = getLoginUrl()
@@ -305,12 +311,21 @@ async function executeDeleteUser() {
           <form @submit.prevent="handleCreateUser" class="premium-form">
             <div class="form-row">
               <div class="form-group">
-                <label for="create-name">Nombre Completo</label>
+                <label for="create-nombre">Nombre</label>
                 <div class="input-icon-wrap">
                   <i class="fa-solid fa-user" aria-hidden="true" />
-                  <input id="create-name" type="text" v-model="createForm.name" required placeholder="Ej. Ana Lucía" />
+                  <input id="create-nombre" type="text" v-model="createForm.nombre" required placeholder="Ej. Ana Lucía" />
                 </div>
               </div>
+              <div class="form-group">
+                <label for="create-apellido">Apellido</label>
+                <div class="input-icon-wrap">
+                  <i class="fa-solid fa-user" aria-hidden="true" />
+                  <input id="create-apellido" type="text" v-model="createForm.apellido" placeholder="Ej. Pérez" />
+                </div>
+              </div>
+            </div>
+            <div class="form-row">
               <div class="form-group">
                 <label for="create-email">Correo Electrónico</label>
                 <div class="input-icon-wrap">
@@ -318,8 +333,6 @@ async function executeDeleteUser() {
                   <input id="create-email" type="email" v-model="createForm.email" required placeholder="ejemplo@courierbox.com" />
                 </div>
               </div>
-            </div>
-            <div class="form-row">
               <div class="form-group">
                 <label for="create-password">
                   Contraseña
@@ -331,8 +344,22 @@ async function executeDeleteUser() {
                 </div>
                 <span class="field-hint">Si dejas vacío, se generará automáticamente.</span>
               </div>
-              <div class="form-group">
-                <AppSelect v-model="createForm.role" :options="roleOptions" label="Rol" />
+            </div>
+
+            <div class="form-group">
+              <label>Rol</label>
+              <div class="role-cards">
+                <button
+                  v-for="opt in roleOptions"
+                  :key="opt.value"
+                  type="button"
+                  class="role-card"
+                  :class="{ selected: createForm.role === opt.value }"
+                  @click="createForm.role = opt.value"
+                >
+                  <span class="role-card__label">{{ opt.label }}</span>
+                  <i v-if="createForm.role === opt.value" class="fa-solid fa-circle-check" aria-hidden="true" />
+                </button>
               </div>
             </div>
             <label class="checkbox-row">
@@ -719,13 +746,43 @@ async function executeDeleteUser() {
   gap: $space-5;
 
   .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
     gap: $space-4;
 
+    .form-group { flex: 1 1 0; min-width: 0; }
+
     @media (max-width: 640px) {
-      grid-template-columns: 1fr;
+      flex-direction: column;
     }
+  }
+
+  .role-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-2;
+  }
+
+  .role-card {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-2;
+    padding: 0.6rem 0.9rem;
+    border-radius: 10px;
+    border: 1px solid rgba($ink-500, 0.35);
+    background: rgba($ink-1000, 0.5);
+    color: $ink-200;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.16s ease;
+
+    &:hover { border-color: rgba($brand-orange, 0.5); }
+    &.selected {
+      border-color: $brand-orange;
+      background: rgba($brand-orange, 0.12);
+      color: $brand-orange;
+    }
+    i { font-size: 0.8rem; }
   }
 
   .form-group {

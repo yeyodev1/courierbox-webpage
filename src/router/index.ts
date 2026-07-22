@@ -315,8 +315,14 @@ const routes: RouteRecordRaw[] = [
       {
         path: "envios",
         name: "BodegaEnvios",
-        component: () => import("@/views/admin/AdminEnviosView.vue"),
+        component: () => import("@/views/bodega/BodegaEnviosView.vue"),
         meta: { title: "Bodega · Envíos · Courier Box" },
+      },
+      {
+        path: "motorizados",
+        name: "BodegaMotorizados",
+        component: () => import("@/views/bodega/BodegaMotorizadosView.vue"),
+        meta: { title: "Bodega · Motorizados · Courier Box" },
       },
     ],
   },

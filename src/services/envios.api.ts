@@ -45,6 +45,7 @@ export interface EnvioDomicilio {
   recibidoPorNombre: string
   recibidoPorApellido: string
   recibidoPorCedula: string
+  recibidoPorContacto: string
   trayectoUsa: TrayectoPago
   trayectoLocal: TrayectoPago
   estado: 'pendiente' | 'asignado' | 'en_ruta' | 'entregado' | 'fallido'
@@ -109,7 +110,7 @@ class EnviosAPI extends APIBase {
     return res.data
   }
 
-  async marcarEntregado(id: string, data: { fotoEntregaUrl?: string; firmaUrl?: string; novedad?: string; recibidoPorNombre?: string; recibidoPorApellido?: string; recibidoPorCedula?: string }) {
+  async marcarEntregado(id: string, data: { fotoEntregaUrl?: string; firmaUrl?: string; novedad?: string; recibidoPorNombre?: string; recibidoPorApellido?: string; recibidoPorCedula?: string; recibidoPorContacto?: string }) {
     const res = await this.patch<{ envio: EnvioDomicilio }>(`v1/envios/${id}/entregado`, data)
     return res.data
   }
@@ -117,6 +118,15 @@ class EnviosAPI extends APIBase {
   async listMotorizados() {
     const res = await this.get<{ motorizados: Motorizado[] }>('v1/envios/motorizados')
     return res.data
+  }
+
+  async createMotorizado(data: { name: string; email: string; password?: string; sendEmail?: boolean; loginUrl?: string }) {
+    const res = await this.post<{ motorizado: Motorizado; password?: string }>('v1/envios/motorizados', data)
+    return res.data
+  }
+
+  async deleteMotorizado(id: string) {
+    await this.delete(`v1/envios/motorizados/${id}`)
   }
 
   async update(id: string, data: Partial<EnvioDomicilio>) {

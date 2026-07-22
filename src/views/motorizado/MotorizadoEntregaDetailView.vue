@@ -69,6 +69,7 @@
             <input v-model="recibeNombre" placeholder="Nombre" />
             <input v-model="recibeApellido" placeholder="Apellido" />
             <input v-model="recibeCedula" placeholder="Cédula" inputmode="numeric" />
+            <input v-model="recibeContacto" placeholder="Correo o teléfono de quien recibe" />
           </div>
         </div>
 
@@ -130,6 +131,7 @@ const novedad = ref('')
 const recibeNombre = ref('')
 const recibeApellido = ref('')
 const recibeCedula = ref('')
+const recibeContacto = ref('')
 
 const puedeEntregar = computed(() =>
   !!fotoUrl.value && !!recibeNombre.value.trim() && !!recibeApellido.value.trim() && !!recibeCedula.value.trim()
@@ -264,6 +266,7 @@ async function entregar() {
       recibidoPorNombre: recibeNombre.value.trim(),
       recibidoPorApellido: recibeApellido.value.trim(),
       recibidoPorCedula: recibeCedula.value.trim(),
+      recibidoPorContacto: recibeContacto.value.trim(),
     })
     toast.showNotification('Entrega registrada y cliente notificado', 'success')
     router.push('/motorizado')
